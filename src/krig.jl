@@ -243,7 +243,7 @@ function set_constraints_rhs! end
 # IMPLEMENTATIONS
 # ----------------
 
-include("kriging/simple.jl")
-include("kriging/ordinary.jl")
-include("kriging/universal.jl")
-include("kriging/externaldrift.jl")
+include("krig/simple.jl")
+include("krig/ordinary.jl")
+include("krig/universal.jl")
+include("krig/externaldrift.jl")

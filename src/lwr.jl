@@ -12,13 +12,11 @@ distance-based weights.
 
 ## References
 
-* Stone 1977. *Consistent non-parametric regression.*
-* Cleveland 1979. *Robust locally weighted regression and smoothing scatterplots.*
-* Cleveland & Grosse 1991. *Computational methods for local regression.*
-
-### Notes
-
-* In the current implementation, the variance is computed assuming normal residuals. 
+* Stone 1977. [Consistent non-parametric regression](https://tinyurl.com/4da68xxf)
+* Cleveland 1979. [Robust locally weighted regression and smoothing
+  scatterplots](https://www.tandfonline.com/doi/abs/10.1080/01621459.1979.10481038)
+* Cleveland & Grosse 1991. [Computational methods for local
+  regression](https://link.springer.com/article/10.1007/BF01890836)
 """
 struct LWR{D,F} <: GeoStatsModel
   distance::D

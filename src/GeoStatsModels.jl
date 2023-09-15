@@ -17,7 +17,7 @@ using Unitful
 using Tables
 
 include("models.jl")
-include("kriging.jl")
+include("krig.jl")
 include("idw.jl")
 include("lwr.jl")
 

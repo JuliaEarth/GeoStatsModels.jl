@@ -9,7 +9,7 @@ using Statistics
 using Test, Random
 
 # list of tests
-testfiles = ["kriging.jl"]
+testfiles = ["krig.jl"]
 
 @testset "KrigingEstimators.jl" begin
   for testfile in testfiles
