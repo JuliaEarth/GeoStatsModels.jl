@@ -1,4 +1,4 @@
-# KrigingEstimators.jl
+# GeoStatsModels.jl
 
 [![][build-img]][build-url] [![][codecov-img]][codecov-url]
 
