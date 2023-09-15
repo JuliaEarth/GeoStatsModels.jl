@@ -17,6 +17,7 @@ Variography = "04a0146e-e6df-5636-8d7f-62fa9eb0b20c"
 [compat]
 Combinatorics = "1.0"
 Distributions = "0.25"
+GeoTables = "1.6"
 Meshes = "0.35"
 Tables = "1.10"
 Unitful = "1.11"
