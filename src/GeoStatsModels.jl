@@ -19,12 +19,11 @@ include("models.jl")
 include("kriging.jl")
 
 export
-  # estimators
+  # Kriging
   KrigingModel,
   SimpleKriging,
   OrdinaryKriging,
   UniversalKriging,
-  ExternalDriftKriging,
-  weights
+  ExternalDriftKriging
 
 end
