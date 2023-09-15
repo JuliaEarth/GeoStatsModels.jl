@@ -1,6 +1,18 @@
 using GeoStatsModels
-using Test
+using Meshes
+using GeoTables
+using Variography
+using CoDa
+using Unitful
+using LinearAlgebra
+using Statistics
+using Test, Random
 
-@testset "GeoStatsModels.jl" begin
-    # Write your tests here.
+# list of tests
+testfiles = ["kriging.jl"]
+
+@testset "KrigingEstimators.jl" begin
+  for testfile in testfiles
+    include(testfile)
+  end
 end
