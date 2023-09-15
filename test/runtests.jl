@@ -11,7 +11,7 @@ using Test, Random
 # list of tests
 testfiles = ["krig.jl"]
 
-@testset "KrigingEstimators.jl" begin
+@testset "GeoStatsModels.jl" begin
   for testfile in testfiles
     include(testfile)
   end
