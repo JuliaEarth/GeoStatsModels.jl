@@ -4,12 +4,9 @@
 
 """
     ExternalDriftKriging(γ, drifts)
-    ExternalDriftKriging(data, γ, drifts)
 
 External Drift Kriging with variogram model `γ` and
 external `drifts` functions.
-
-Optionally, pass the geospatial `data` to the [`fit`](@ref) function.
 
 ### Notes
 

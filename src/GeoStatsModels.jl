@@ -9,7 +9,8 @@ using GeoTables
 using Variography
 
 using LinearAlgebra: Factorization, Symmetric
-using LinearAlgebra: bunchkaufman, cholesky, issuccess, ⋅
+using LinearAlgebra: bunchkaufman, cholesky
+using LinearAlgebra: issuccess, ⋅
 using Combinatorics: multiexponents
 using Distributions: Normal, Dirac
 using Unitful
@@ -17,13 +18,16 @@ using Tables
 
 include("models.jl")
 include("kriging.jl")
+include("idw.jl")
+include("lwr.jl")
 
 export
-  # Kriging
-  KrigingModel,
+  # models
   SimpleKriging,
   OrdinaryKriging,
   UniversalKriging,
-  ExternalDriftKriging
+  ExternalDriftKriging,
+  IDW,
+  LWR
 
 end

@@ -4,11 +4,8 @@
 
 """
     OrdinaryKriging(γ)
-    OrdinaryKriging(data, γ)
 
 Ordinary Kriging with variogram model `γ`.
-
-Optionally, pass the geospatial `data` to the [`fit`](@ref) function.
 """
 struct OrdinaryKriging{G<:Variogram} <: KrigingModel
   γ::G

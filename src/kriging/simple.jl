@@ -4,11 +4,8 @@
 
 """
     SimpleKriging(γ, μ)
-    SimpleKriging(data, γ, μ)
 
 Simple Kriging with variogram model `γ` and constant mean `μ`.
-
-Optionally, pass the geospatial `data` to the [`fit`](@ref) function.
 
 ### Notes
 
