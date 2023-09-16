@@ -72,9 +72,12 @@ function weights(fitted::FittedIDW, uₒ)
   e = fitted.model.exponent
   δ = fitted.model.distance
   d = fitted.state.data
+  Ω = domain(d)
 
   xₒ = coordinates(uₒ)
-  x(i) = coordinates(centroid(domain(d), i))
+  x(i) = coordinates(centroid(Ω, i))
 
-  [1 / δ(xₒ, x(i)) ^ e for i in 1:nrow(d)]
+  λ(i) = 1 / δ(xₒ, x(i)) ^ e
+
+  map(λ, 1:nelements(Ω))
 end
