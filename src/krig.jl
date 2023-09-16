@@ -43,23 +43,12 @@ struct FittedKriging{M<:KrigingModel,S<:KrigingState}
   state::S
 end
 
-"""
-    status(fitted)
-
-Return the status of the `fitted` Kriging model, meaning
-the factorization of the Kriging system was successful.
-"""
 status(fitted::FittedKriging) = issuccess(fitted.state.LHS)
 
 #--------------
 # FITTING STEP
 #--------------
 
-"""
-    fit(model, data)
-
-Build Kriging system from `data` and return a fitted model.
-"""
 function fit(model::KrigingModel, data)
   # variogram and domain
   γ = model.γ

@@ -14,21 +14,21 @@ abstract type GeoStatsModel end
 """
     fit(model, data)
 
-Fit model to geospatial `data` and return a fitted model.
+Fit `model` to geospatial `data` and return a fitted model.
 """
 function fit end
 
 """
     predict(model, var, uₒ)
 
-Posterior mean of variable `var` at geometry `uₒ`.
+Predict variable `var` at geometry `uₒ` with given `model`.
 """
 function predict end
 
 """
     predictprob(model, var, uₒ)
 
-Posterior distribution of variable `var` at geometry `uₒ`.
+Predict distribution of variable `var` at geometry `uₒ` with given `model`.
 """
 function predictprob end
 

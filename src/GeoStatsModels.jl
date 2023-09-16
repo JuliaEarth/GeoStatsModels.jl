@@ -11,6 +11,7 @@ using Variography
 using LinearAlgebra
 using Distributions
 using Combinatorics
+using Distances
 using Unitful
 using Tables
 
