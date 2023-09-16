@@ -26,8 +26,9 @@ end
 LWR(weightfun) = LWR(weightfun, Euclidean())
 LWR() = LWR(h -> exp(-3 * h ^ 2))
 
-struct LWRState{D<:AbstractGeoTable}
+mutable struct LWRState{D<:AbstractGeoTable,T}
   data::D
+  X::T
 end
 
 struct FittedLWR{M<:LWR,S<:LWRState}
@@ -42,8 +43,17 @@ status(fitted::FittedLWR) = true
 #--------------
 
 function fit(model::LWR, data)
+  Ω = domain(data)
+  n = nelements(Ω)
+
+  x(i) = coordinates(centroid(Ω, i))
+
+  # coordinates matrix
+  X = mapreduce(x, hcat, 1:n)
+  X = [ones(eltype(X), n) X']
+
   # record state
-  state = LWRState(data)
+  state = LWRState(data, X)
 
   # return fitted model
   FittedLWR(model, state)
@@ -53,41 +63,57 @@ end
 # PREDICTION STEP
 #-----------------
 
-predict(fitted::FittedLWR, var, uₒ) = first(lwr(fitted, var, uₒ))
+predict(fitted::FittedLWR, var, uₒ) = predictmean(fitted, var, uₒ)
 
 function predictprob(fitted::FittedLWR, var, uₒ)
-  μ, σ² = lwr(fitted, var, uₒ)
+  X, W, A, x, z = matrices(fitted, var, uₒ)
+  μ = lwrmean(X, W, A, x, z)
+  σ² = lwrvar(X, W, A, x)
   Normal(μ, √σ²)
 end
 
-function lwr(fitted::FittedLWR, var, uₒ)
-  w = fitted.model.weightfun
-  δ = fitted.model.distance
+function predictmean(fitted::FittedLWR, var, uₒ)
+  X, W, A, x, z = matrices(fitted, var, uₒ)
+  lwrmean(X, W, A, x, z)
+end
+
+function matrices(fitted::FittedLWR, var, uₒ)
   d = fitted.state.data
   c = Tables.columns(values(d))
   z = Tables.getcolumn(c, var)
 
+  X = fitted.state.X
+  W = wmatrix(fitted, uₒ)
+  A = X' * W * X
+
+  xₒ = coordinates(uₒ)
+  x = [one(eltype(xₒ)); xₒ]
+
+  X, W, A, x, z
+end
+
+function wmatrix(fitted::FittedLWR, uₒ)
+  w = fitted.model.weightfun
+  δ = fitted.model.distance
+  d = fitted.state.data
   Ω = domain(d)
   n = nelements(Ω)
 
+  xₒ = coordinates(uₒ)
   x(i) = coordinates(centroid(Ω, i))
 
-  # fit step
-  X = mapreduce(x, hcat, 1:n)
-  Xₗ = [ones(eltype(X), n) X']
-  zₗ = z
-
-  # predict step
-  xₒ = coordinates(uₒ)
   δs = map(i -> δ(xₒ, x(i)), 1:n)
-  δs .= δs ./ maximum(δs)
-  Wₗ = Diagonal(w.(δs))
-  θₗ = Xₗ' * Wₗ * Xₗ \ Xₗ' * Wₗ * zₗ
-  xₗ = [one(eltype(xₒ)); xₒ]
-  rₗ = Wₗ * Xₗ * (Xₗ' * Wₗ * Xₗ \ xₗ)
+  ws = w.(δs / maximum(δs))
 
-  μ = θₗ ⋅ xₗ
-  σ² = norm(rₗ)
+  Diagonal(ws)
+end
 
-  μ, σ²
+function lwrmean(X, W, A, x, z)
+  θ = A \ X' * (W * z)
+  sum(x .* θ)
+end
+
+function lwrvar(X, W, A, x)
+  r = W * X * (A \ x)
+  norm(r)
 end
