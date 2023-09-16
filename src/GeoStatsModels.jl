@@ -8,11 +8,9 @@ using Meshes
 using GeoTables
 using Variography
 
-using LinearAlgebra: Factorization, Symmetric
-using LinearAlgebra: bunchkaufman, cholesky
-using LinearAlgebra: issuccess, ⋅
-using Combinatorics: multiexponents
-using Distributions: Normal, Dirac
+using LinearAlgebra
+using Distributions
+using Combinatorics
 using Unitful
 using Tables
 
