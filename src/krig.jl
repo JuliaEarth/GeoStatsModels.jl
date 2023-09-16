@@ -151,7 +151,7 @@ function predictmean(fitted::FittedKriging, weights::KrigingWeights, var)
   c = Tables.columns(values(d))
   z = Tables.getcolumn(c, var)
   λ = weights.λ
-  sum(λ .* z)
+  sum(i -> λ[i] * z[i], eachindex(λ, z))
 end
 
 """

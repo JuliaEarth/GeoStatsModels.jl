@@ -65,7 +65,7 @@ function predictmean(fitted::FittedIDW, weights, var)
   c = Tables.columns(values(d))
   z = Tables.getcolumn(c, var)
   λ = weights
-  sum(λ .* z)
+  sum(i -> λ[i] * z[i], eachindex(λ, z))
 end
 
 function weights(fitted::FittedIDW, uₒ)

@@ -110,7 +110,7 @@ end
 
 function lwrmean(X, W, A, x, z)
   θ = A \ X' * (W * z)
-  sum(x .* θ)
+  sum(i -> x[i] * θ[i], eachindex(x, θ))
 end
 
 function lwrvar(X, W, A, x)
