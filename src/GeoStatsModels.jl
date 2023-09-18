@@ -22,10 +22,7 @@ include("lwr.jl")
 
 export
   # models
-  SimpleKriging,
-  OrdinaryKriging,
-  UniversalKriging,
-  ExternalDriftKriging,
+  Kriging,
   IDW,
   LWR
 

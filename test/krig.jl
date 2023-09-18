@@ -1,4 +1,9 @@
 @testset "Kriging" begin
+  SK = GeoStatsModels.SimpleKriging
+  OK = GeoStatsModels.OrdinaryKriging
+  UK = GeoStatsModels.UniversalKriging
+  DK = GeoStatsModels.ExternalDriftKriging
+
   @testset "Basics" begin
     # create some data
     dim = 3
@@ -7,10 +12,10 @@
     data = georef((z=rand(nobs),), pset)
 
     γ = GaussianVariogram(sill=1.0, range=1.0, nugget=0.0)
-    simkrig = SimpleKriging(γ, mean(data.z))
-    ordkrig = OrdinaryKriging(γ)
-    unikrig = UniversalKriging(γ, 1, 3)
-    drikrig = ExternalDriftKriging(γ, [x -> 1.0])
+    simkrig = SK(γ, mean(data.z))
+    ordkrig = OK(γ)
+    unikrig = UK(γ, 1, 3)
+    drikrig = DK(γ, [x -> 1.0])
 
     sk = GeoStatsModels.fit(simkrig, data)
     ok = GeoStatsModels.fit(ordkrig, data)
@@ -49,10 +54,10 @@
     h = rand(Vec3)
     pset_h = PointSet([pset[i] + h for i in 1:nelements(pset)])
     data_h = georef((z=data.z,), pset_h)
-    sk_h = GeoStatsModels.fit(SimpleKriging(γ, mean(data_h.z)), data_h)
-    ok_h = GeoStatsModels.fit(OrdinaryKriging(γ), data_h)
-    uk_h = GeoStatsModels.fit(UniversalKriging(γ, 1, 3), data_h)
-    dk_h = GeoStatsModels.fit(ExternalDriftKriging(γ, [x -> 1.0]), data_h)
+    sk_h = GeoStatsModels.fit(SK(γ, mean(data_h.z)), data_h)
+    ok_h = GeoStatsModels.fit(OK(γ), data_h)
+    uk_h = GeoStatsModels.fit(UK(γ, 1, 3), data_h)
+    dk_h = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data_h)
     skdist_h = GeoStatsModels.predictprob(sk_h, :z, pₒ + h)
     okdist_h = GeoStatsModels.predictprob(ok_h, :z, pₒ + h)
     ukdist_h = GeoStatsModels.predictprob(uk_h, :z, pₒ + h)
@@ -70,10 +75,10 @@
     # Kriging variance is multiplied by the same factor
     α = 2.0
     γ_α = GaussianVariogram(sill=α, range=1.0, nugget=0.0)
-    sk_α = GeoStatsModels.fit(SimpleKriging(γ_α, mean(data.z)), data)
-    ok_α = GeoStatsModels.fit(OrdinaryKriging(γ_α), data)
-    uk_α = GeoStatsModels.fit(UniversalKriging(γ_α, 1, 3), data)
-    dk_α = GeoStatsModels.fit(ExternalDriftKriging(γ_α, [x -> 1.0]), data)
+    sk_α = GeoStatsModels.fit(SK(γ_α, mean(data.z)), data)
+    ok_α = GeoStatsModels.fit(OK(γ_α), data)
+    uk_α = GeoStatsModels.fit(UK(γ_α, 1, 3), data)
+    dk_α = GeoStatsModels.fit(DK(γ_α, [x -> 1.0]), data)
     skdist_α = GeoStatsModels.predictprob(sk_α, :z, pₒ)
     okdist_α = GeoStatsModels.predictprob(ok_α, :z, pₒ)
     ukdist_α = GeoStatsModels.predictprob(uk_α, :z, pₒ)
@@ -90,10 +95,10 @@
     # Kriging variance is a function of data configuration, not data values
     δ = rand(nobs)
     data_δ = georef((z=data.z .+ δ,), pset)
-    sk_δ = GeoStatsModels.fit(SimpleKriging(γ, mean(data_δ.z)), data_δ)
-    ok_δ = GeoStatsModels.fit(OrdinaryKriging(γ), data_δ)
-    uk_δ = GeoStatsModels.fit(UniversalKriging(γ, 1, 3), data_δ)
-    dk_δ = GeoStatsModels.fit(ExternalDriftKriging(γ, [x -> 1.0]), data_δ)
+    sk_δ = GeoStatsModels.fit(SK(γ, mean(data_δ.z)), data_δ)
+    ok_δ = GeoStatsModels.fit(OK(γ), data_δ)
+    uk_δ = GeoStatsModels.fit(UK(γ, 1, 3), data_δ)
+    dk_δ = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data_δ)
     skdist_δ = GeoStatsModels.predictprob(sk_δ, :z, pₒ)
     okdist_δ = GeoStatsModels.predictprob(ok_δ, :z, pₒ)
     ukdist_δ = GeoStatsModels.predictprob(uk_δ, :z, pₒ)
@@ -104,14 +109,14 @@
     @test var(dkdist_δ) ≈ var(dkdist)
 
     # Ordinary Kriging ≡ Universal Kriging with 0th degree drift
-    uk_0 = GeoStatsModels.fit(UniversalKriging(γ, 0, 3), data)
+    uk_0 = GeoStatsModels.fit(UK(γ, 0, 3), data)
     okdist = GeoStatsModels.predictprob(ok, :z, pₒ)
     ukdist_0 = GeoStatsModels.predictprob(uk_0, :z, pₒ)
     @test mean(okdist) ≈ mean(ukdist_0)
     @test var(okdist) ≈ var(ukdist_0)
 
     # Ordinary Kriging ≡ Kriging with constant external drift
-    dk_c = GeoStatsModels.fit(ExternalDriftKriging(γ, [x -> 1.0]), data)
+    dk_c = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
     okdist = GeoStatsModels.predictprob(ok, :z, pₒ)
     dkdist_c = GeoStatsModels.predictprob(dk_c, :z, pₒ)
     @test mean(okdist) ≈ mean(dkdist_c)
@@ -126,9 +131,9 @@
     data = georef((z=rand(nobs),), pset)
 
     γ_ns = PowerVariogram()
-    ok_ns = GeoStatsModels.fit(OrdinaryKriging(γ_ns), data)
-    uk_ns = GeoStatsModels.fit(UniversalKriging(γ_ns, 1, 3), data)
-    dk_ns = GeoStatsModels.fit(ExternalDriftKriging(γ_ns, [x -> 1.0]), data)
+    ok_ns = GeoStatsModels.fit(OK(γ_ns), data)
+    uk_ns = GeoStatsModels.fit(UK(γ_ns, 1, 3), data)
+    dk_ns = GeoStatsModels.fit(DK(γ_ns, [x -> 1.0]), data)
     for j in 1:nobs
       okdist_ns = GeoStatsModels.predictprob(ok_ns, :z, pset[j])
       ukdist_ns = GeoStatsModels.predictprob(uk_ns, :z, pset[j])
@@ -161,15 +166,15 @@
     pₒ_f = rand(Point{dim,Float32})
     pₒ_d = convert(Point{dim,Float64}, pₒ_f)
     γ_f = GaussianVariogram(sill=1.0f0, range=1.0f0, nugget=0.0f0)
-    sk_f = GeoStatsModels.fit(SimpleKriging(γ_f, mean(data_f.z)), data_f)
-    ok_f = GeoStatsModels.fit(OrdinaryKriging(γ_f), data_f)
-    uk_f = GeoStatsModels.fit(UniversalKriging(γ_f, 1, 3), data_f)
-    dk_f = GeoStatsModels.fit(ExternalDriftKriging(γ_f, [x -> 1.0f0]), data_f)
+    sk_f = GeoStatsModels.fit(SK(γ_f, mean(data_f.z)), data_f)
+    ok_f = GeoStatsModels.fit(OK(γ_f), data_f)
+    uk_f = GeoStatsModels.fit(UK(γ_f, 1, 3), data_f)
+    dk_f = GeoStatsModels.fit(DK(γ_f, [x -> 1.0f0]), data_f)
     γ_d = GaussianVariogram(sill=1.0, range=1.0, nugget=0.0)
-    sk_d = GeoStatsModels.fit(SimpleKriging(γ_d, mean(data_d.z)), data_d)
-    ok_d = GeoStatsModels.fit(OrdinaryKriging(γ_d), data_d)
-    uk_d = GeoStatsModels.fit(UniversalKriging(γ_d, 1, 3), data_d)
-    dk_d = GeoStatsModels.fit(ExternalDriftKriging(γ_d, [x -> 1.0]), data_d)
+    sk_d = GeoStatsModels.fit(SK(γ_d, mean(data_d.z)), data_d)
+    ok_d = GeoStatsModels.fit(OK(γ_d), data_d)
+    uk_d = GeoStatsModels.fit(UK(γ_d, 1, 3), data_d)
+    dk_d = GeoStatsModels.fit(DK(γ_d, [x -> 1.0]), data_d)
     skdist_f = GeoStatsModels.predictprob(sk_f, :z, pₒ_f)
     okdist_f = GeoStatsModels.predictprob(ok_f, :z, pₒ_f)
     ukdist_f = GeoStatsModels.predictprob(uk_f, :z, pₒ_f)
@@ -196,10 +201,10 @@
     data = georef((z=rand(nobs),), pset)
 
     γ = GaussianVariogram(sill=1.0, range=1.0, nugget=0.0)
-    sk = GeoStatsModels.fit(SimpleKriging(γ, mean(data.z)), data)
-    ok = GeoStatsModels.fit(OrdinaryKriging(γ), data)
-    uk = GeoStatsModels.fit(UniversalKriging(γ, 1, dim), data)
-    dk = GeoStatsModels.fit(ExternalDriftKriging(γ, [x -> 1.0]), data)
+    sk = GeoStatsModels.fit(SK(γ, mean(data.z)), data)
+    ok = GeoStatsModels.fit(OK(γ), data)
+    uk = GeoStatsModels.fit(UK(γ, 1, dim), data)
+    dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
 
     # predict on a quadrangle
     uₒ = Quadrangle((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0))
@@ -226,10 +231,10 @@
 
     # basic models
     γ = GaussianVariogram(sill=1.0, range=1.0, nugget=0.0)
-    sk = GeoStatsModels.fit(SimpleKriging(γ, mean(data.z)), data)
-    ok = GeoStatsModels.fit(OrdinaryKriging(γ), data)
-    uk = GeoStatsModels.fit(UniversalKriging(γ, 1, dim), data)
-    dk = GeoStatsModels.fit(ExternalDriftKriging(γ, [x -> 1.0]), data)
+    sk = GeoStatsModels.fit(SK(γ, mean(data.z)), data)
+    ok = GeoStatsModels.fit(OK(γ), data)
+    uk = GeoStatsModels.fit(UK(γ, 1, dim), data)
+    dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
 
     # prediction on a quadrangle
     uₒ = Quadrangle((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0))
@@ -252,10 +257,10 @@
     data = georef((z=rand(nobs) * u"K",), pset)
 
     γ = GaussianVariogram(sill=1.0u"K^2")
-    sk = GeoStatsModels.fit(SimpleKriging(γ, mean(data.z)), data)
-    ok = GeoStatsModels.fit(OrdinaryKriging(γ), data)
-    uk = GeoStatsModels.fit(UniversalKriging(γ, 1, dim), data)
-    dk = GeoStatsModels.fit(ExternalDriftKriging(γ, [x -> 1.0]), data)
+    sk = GeoStatsModels.fit(SK(γ, mean(data.z)), data)
+    ok = GeoStatsModels.fit(OK(γ), data)
+    uk = GeoStatsModels.fit(UK(γ, 1, dim), data)
+    dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
     for _k in [sk, ok, uk, dk]
       w = GeoStatsModels.weights(_k, Point(0, 0, 0))
       μ = GeoStatsModels.predictmean(_k, w, :z)
@@ -263,5 +268,13 @@
       @test unit(μ) == u"K"
       @test unit(σ²) == u"K^2"
     end
+  end
+
+  @testset begin "Kriging"
+    γ = GaussianVariogram()
+    @test Kriging(γ) isa OK
+    @test Kriging(γ, 0.0) isa SK
+    @test Kriging(γ, 1, 2) isa UK
+    @test Kriging(γ, [x -> 1]) isa DK
   end
 end

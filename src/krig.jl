@@ -236,3 +236,9 @@ include("krig/simple.jl")
 include("krig/ordinary.jl")
 include("krig/universal.jl")
 include("krig/externaldrift.jl")
+
+# meta model
+Kriging(γ) = OrdinaryKriging(γ)
+Kriging(γ, μ::Number) = SimpleKriging(γ, μ)
+Kriging(γ, deg::Int, dim::Int) = UniversalKriging(γ, deg, dim)
+Kriging(γ, drifts::AbstractVector) = ExternalDriftKriging(γ, drifts)
