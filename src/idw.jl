@@ -70,7 +70,7 @@ function idw(fitted::FittedIDW, weights, var)
   λ(i) = w[i] / Σw
 
   if isinf(Σw) # some distance is zero?
-    z[findfirst(iszero, w)]
+    z[findfirst(isinf, w)]
   else
     sum(i -> λ(i) * z[i], eachindex(z))
   end
