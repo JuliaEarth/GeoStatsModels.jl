@@ -237,7 +237,28 @@ include("krig/ordinary.jl")
 include("krig/universal.jl")
 include("krig/externaldrift.jl")
 
-# meta model
+"""
+    Kriging(γ)
+
+Equivalent to [`OrdinaryKriging`](@ref) with variogram `γ`.
+
+    Kriging(γ, μ)
+
+Equivalent to [`SimpleKriging`](@ref) with variogram `γ` and
+constant mean `μ`.
+
+    Kriging(γ, deg, dim)
+
+Equivalent to [`UniversalKriging`](@ref) with variogram `γ` and
+`deg`-order polynomial in `dim`-dimensinal space.
+
+    Kriging(γ, drifts)
+
+Equivalent to [`ExternalDriftKriging`](@ref) with variogram `γ` and
+`drifts` functions.
+
+Please check the docstring of corresponding models for more details.
+"""
 Kriging(γ) = OrdinaryKriging(γ)
 Kriging(γ, μ::Number) = SimpleKriging(γ, μ)
 Kriging(γ, deg::Int, dim::Int) = UniversalKriging(γ, deg, dim)
