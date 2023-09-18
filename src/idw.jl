@@ -64,8 +64,16 @@ function predictmean(fitted::FittedIDW, weights, var)
   d = fitted.state.data
   c = Tables.columns(values(d))
   z = Tables.getcolumn(c, var)
-  λ = weights
-  sum(i -> λ[i] * z[i], eachindex(λ, z))
+  w = weights
+  Σw = sum(w)
+
+  λ(i) = w[i] / Σw
+
+  if isinf(Σw) # some distance is zero?
+    z[findfirst(iszero, w)]
+  else
+    sum(i -> λ(i) * z[i], eachindex(z))
+  end
 end
 
 function weights(fitted::FittedIDW, uₒ)
