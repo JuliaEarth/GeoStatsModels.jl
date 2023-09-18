@@ -52,15 +52,15 @@ end
 # PREDICTION STEP
 #-----------------
 
-predict(fitted::FittedIDW, var, uₒ) = predictmean(fitted, weights(fitted, uₒ), var)
+predict(fitted::FittedIDW, var, uₒ) = idw(fitted, weights(fitted, uₒ), var)
 
 function predictprob(fitted::FittedIDW, var, uₒ)
   w = weights(fitted, uₒ)
-  μ = predictmean(fitted, w, var)
+  μ = idw(fitted, w, var)
   Dirac(μ)
 end
 
-function predictmean(fitted::FittedIDW, weights, var)
+function idw(fitted::FittedIDW, weights, var)
   d = fitted.state.data
   c = Tables.columns(values(d))
   z = Tables.getcolumn(c, var)
