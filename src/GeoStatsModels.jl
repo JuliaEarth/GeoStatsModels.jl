@@ -15,6 +15,8 @@ using Distances
 using Unitful
 using Tables
 
+import StatsAPI: fit, predict
+
 include("models.jl")
 include("krig.jl")
 include("idw.jl")
@@ -24,6 +26,9 @@ export
   # models
   Kriging,
   IDW,
-  LWR
+  LWR,
+  fit,
+  predict,
+  predictprob
 
 end
