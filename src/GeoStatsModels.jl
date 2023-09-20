@@ -28,6 +28,7 @@ export
   IDW,
   LWR,
   fit,
+  status,
   predict,
   predictprob
 
