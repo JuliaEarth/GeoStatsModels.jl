@@ -9,7 +9,7 @@ using Statistics
 using Test, Random
 
 # list of tests
-testfiles = ["krig.jl", "idw.jl", "lwr.jl", "fitpredict.jl"]
+testfiles = ["krig.jl", "idw.jl", "lwr.jl", "utils.jl"]
 
 @testset "GeoStatsModels.jl" begin
   for testfile in testfiles

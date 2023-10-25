@@ -25,7 +25,7 @@ include("idw.jl")
 include("lwr.jl")
 
 # utility functions
-include("fitpredict.jl")
+include("utils.jl")
 
 export
   # models
