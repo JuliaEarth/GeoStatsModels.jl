@@ -31,15 +31,15 @@ function fitpredictall(
   # fit model to data
   fmodel = fit(model, data)
 
-  # generate prediction
-  function genpred(var)
+  # predict variable values
+  function pred(var)
     map(inds) do ind
       geom = point ? centroid(pdomain, ind) : pdomain[ind]
       predfun(fmodel, var, geom)
     end
   end
 
-  pairs = (var => genpred(var) for var in vars)
+  pairs = (var => pred(var) for var in vars)
   newtab = (; pairs...) |> Tables.materializer(table)
   georef(newtab, pdomain)
 end
@@ -98,8 +98,8 @@ function fitpredictneigh(
   # pre-allocate memory for neighbors
   neighbors = Vector{Int}(undef, maxneighbors)
 
-  # generate prediction
-  function genpred(var)
+  # predict variable values
+  function pred(var)
     map(inds) do ind
       # centroid of estimation
       center = centroid(pdomain, ind)
@@ -128,7 +128,7 @@ function fitpredictneigh(
     end
   end
 
-  pairs = (var => genpred(var) for var in vars)
+  pairs = (var => pred(var) for var in vars)
   newtab = (; pairs...) |> Tables.materializer(table)
   georef(newtab, pdomain)
 end
