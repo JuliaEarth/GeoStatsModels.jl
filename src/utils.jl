@@ -15,14 +15,21 @@ function fitpredict(
   distance=Euclidean(),
   neighborhood=nothing
 )
-  nobs = nrow(geotable)
+  if neighbors
+    _fitpredictneigh(model, geotable, pdomain, path, point, prob, minneighbors, maxneighbors, distance, neighborhood)
+  else
+    _fitpredictall(model, geotable, pdomain, path, point, prob)
+  end
+end
+
+function _fitpredictall(model, geotable, pdomain, path, point, prob)
   table = values(geotable)
   ddomain = domain(geotable)
-  vars = collect(Tables.schema(table).names)
+  vars = Tables.schema(table).names
 
   # adjust data
   data = if point
-    pset = PointSet(centroid(ddomain, i) for i in 1:nobs)
+    pset = PointSet(centroid(ddomain, i) for i in 1:nelements(ddomain))
     _adjustunits(georef(values(geotable), pset))
   else
     _adjustunits(geotable)
@@ -34,73 +41,107 @@ function fitpredict(
   # predict function
   predfun = prob ? predictprob : predict
 
-  pairs = if neighbors
-    # fix neighbors limits
-    if maxneighbors > nobs || maxneighbors < 1
-      @warn "Invalid maximum number of neighbors. Adjusting to $nobs..."
-      maxneighbors = nobs
-    end
+  # fit model to data
+  fmodel = fit(model, data)
 
-    if minneighbors > maxneighbors || minneighbors < 1
-      @warn "Invalid minimum number of neighbors. Adjusting to 1..."
-      minneighbors = 1
-    end
-
-    # determine bounded search method
-    searcher = if isnothing(neighborhood)
-      # nearest neighbor search with a metric
-      KNearestSearch(ddomain, maxneighbors; metric=distance)
-    else
-      # neighbor search with ball neighborhood
-      KBallSearch(ddomain, maxneighbors, neighborhood)
-    end
-
-    # pre-allocate memory for neighbors
-    neighbors = Vector{Int}(undef, maxneighbors)
-
-    map(vars) do var
-      pred = map(inds) do ind
-        # centroid of estimation
-        center = centroid(pdomain, ind)
-
-        # find neighbors with data
-        nneigh = search!(neighbors, center, searcher)
-
-        # predict if enough neighbors
-        if nneigh ≥ minneighbors
-          # final set of neighbors
-          ninds = view(neighbors, 1:nneigh)
-
-          # view neighborhood with data
-          samples = view(data, ninds)
-
-          # fit model to samples
-          fmodel = fit(model, samples)
-
-          # save prediction
-          geom = point ? center : pdomain[ind]
-          predfun(fmodel, var, geom)
-        else # missing prediction
-          missing
-        end
-      end
-
-      var => pred
-    end
-  else
-    # fit model to data
-    fmodel = fit(model, data)
-
-    map(vars) do var
-      pred = map(inds) do ind
-        geom = point ? centroid(pdomain, ind) : pdomain[ind]
-        predfun(fmodel, var, geom)
-      end
-
-      var => pred
+  # predict variable values
+  function pred(var)
+    map(inds) do ind
+      geom = point ? centroid(pdomain, ind) : pdomain[ind]
+      predfun(fmodel, var, geom)
     end
   end
 
+  pairs = (var => pred(var) for var in vars)
+  newtab = (; pairs...) |> Tables.materializer(table)
+  georef(newtab, pdomain)
+end
+
+function _fitpredictneigh(
+  model,
+  geotable,
+  pdomain,
+  path,
+  point,
+  prob,
+  minneighbors,
+  maxneighbors,
+  distance,
+  neighborhood
+)
+  table = values(geotable)
+  ddomain = domain(geotable)
+  vars = Tables.schema(table).names
+
+  # adjust data
+  data = if point
+    pset = PointSet(centroid(ddomain, i) for i in 1:nelements(ddomain))
+    _adjustunits(georef(values(geotable), pset))
+  else
+    _adjustunits(geotable)
+  end
+
+  # fix neighbors limits
+  nobs = nrow(data)
+  if maxneighbors > nobs || maxneighbors < 1
+    @warn "Invalid maximum number of neighbors. Adjusting to $nobs..."
+    maxneighbors = nobs
+  end
+
+  if minneighbors > maxneighbors || minneighbors < 1
+    @warn "Invalid minimum number of neighbors. Adjusting to 1..."
+    minneighbors = 1
+  end
+
+  # determine bounded search method
+  searcher = if isnothing(neighborhood)
+    # nearest neighbor search with a metric
+    KNearestSearch(ddomain, maxneighbors; metric=distance)
+  else
+    # neighbor search with ball neighborhood
+    KBallSearch(ddomain, maxneighbors, neighborhood)
+  end
+
+  # pre-allocate memory for neighbors
+  neighbors = Vector{Int}(undef, maxneighbors)
+
+  # prediction order
+  inds = traverse(pdomain, path)
+
+  # predict function
+  predfun = prob ? predictprob : predict
+
+  # predict variable values
+  function pred(var)
+    map(inds) do ind
+      # centroid of estimation
+      center = centroid(pdomain, ind)
+
+      # find neighbors with data
+      nneigh = search!(neighbors, center, searcher)
+
+      # predict if enough neighbors
+      if nneigh ≥ minneighbors
+        # final set of neighbors
+        ninds = view(neighbors, 1:nneigh)
+
+        # view neighborhood with data
+        samples = view(data, ninds)
+
+        # fit model to samples
+        fmodel = fit(model, samples)
+
+        # save prediction
+        geom = point ? center : pdomain[ind]
+        predfun(fmodel, var, geom)
+      else
+        # missing prediction
+        missing
+      end
+    end
+  end
+
+  pairs = (var => pred(var) for var in vars)
   newtab = (; pairs...) |> Tables.materializer(table)
   georef(newtab, pdomain)
 end
