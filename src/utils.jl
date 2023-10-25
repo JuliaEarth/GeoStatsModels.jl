@@ -81,12 +81,6 @@ function _fitpredictneigh(
     _adjustunits(geotable)
   end
 
-  # prediction order
-  inds = traverse(pdomain, path)
-
-  # predict function
-  predfun = prob ? predictprob : predict
-
   # fix neighbors limits
   nobs = nrow(data)
   if maxneighbors > nobs || maxneighbors < 1
@@ -110,6 +104,12 @@ function _fitpredictneigh(
 
   # pre-allocate memory for neighbors
   neighbors = Vector{Int}(undef, maxneighbors)
+
+  # prediction order
+  inds = traverse(pdomain, path)
+
+  # predict function
+  predfun = prob ? predictprob : predict
 
   # predict variable values
   function pred(var)
