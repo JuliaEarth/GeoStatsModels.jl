@@ -13,9 +13,9 @@ function fitpredict(
   distance=Euclidean(),
   neighborhood=nothing,
   # other kwargs
+  path=LinearPath(),
   point=true,
-  prob=false,
-  path=LinearPath()
+  prob=false
 )
   nobs = nrow(geotable)
   table = values(geotable)
