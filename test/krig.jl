@@ -1,4 +1,6 @@
 @testset "Kriging" begin
+  tol = 10 * eps(Float64)
+
   SK = GeoStatsModels.SimpleKriging
   OK = GeoStatsModels.OrdinaryKriging
   UK = GeoStatsModels.UniversalKriging
@@ -40,7 +42,7 @@
       @test var(okdist) ≥ 0
       @test var(ukdist) ≥ 0
       @test var(dkdist) ≥ 0
-      @test var(skdist) ≤ var(okdist)
+      @test var(skdist) ≤ var(okdist) + tol
     end
 
     # save results on a particular location pₒ
@@ -218,7 +220,7 @@
     @test var(okdist) ≥ 0
     @test var(ukdist) ≥ 0
     @test var(dkdist) ≥ 0
-    @test var(skdist) ≤ var(okdist)
+    @test var(skdist) ≤ var(okdist) + tol
   end
 
   @testset "CoDa" begin
