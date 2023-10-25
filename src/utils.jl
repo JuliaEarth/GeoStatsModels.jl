@@ -2,22 +2,27 @@
 # Licensed under the MIT License. See LICENSE in the project root.
 # ------------------------------------------------------------------
 
-function fitpredict(model::GeoStatsModel, geotable::GeoTable, pdomain::Domain; neighbors=true, kwargs...)
-  if neighbors
-    fitpredictneigh(model, geotable, pdomain; kwargs...)
-  else
-    fitpredictall(model, geotable, pdomain; kwargs...)
-  end
-end
-
-function fitpredictall(
+function fitpredict(
   model::GeoStatsModel,
   geotable::GeoTable,
   pdomain::Domain;
   path=LinearPath(),
   point=true,
-  prob=false
+  prob=false,
+  neighbors=true,
+  minneighbors=1,
+  maxneighbors=10,
+  distance=Euclidean(),
+  neighborhood=nothing
 )
+  if neighbors
+    _fitpredictneigh(model, geotable, pdomain; path, point, prob, minneighbors, maxneighbors, distance, neighborhood)
+  else
+    _fitpredictall(model, geotable, pdomain; path, point, prob)
+  end
+end
+
+function _fitpredictall(model, geotable, pdomain; path, point, prob)
   table = values(geotable)
   ddomain = domain(geotable)
   vars = Tables.schema(table).names
@@ -52,17 +57,17 @@ function fitpredictall(
   georef(newtab, pdomain)
 end
 
-function fitpredictneigh(
-  model::GeoStatsModel,
-  geotable::GeoTable,
-  pdomain::Domain;
-  path=LinearPath(),
-  point=true,
-  prob=false,
-  minneighbors=1,
-  maxneighbors=10,
-  distance=Euclidean(),
-  neighborhood=nothing
+function _fitpredictneigh(
+  model,
+  geotable,
+  pdomain;
+  path,
+  point,
+  prob,
+  minneighbors,
+  maxneighbors,
+  distance,
+  neighborhood
 )
   table = values(geotable)
   ddomain = domain(geotable)
