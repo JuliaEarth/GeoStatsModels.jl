@@ -1,4 +1,4 @@
-@testset "utility functions" begin
+@testset "fitpredict" begin
   pset = PointSet(rand(Point2, 3))
   gtb = georef((a=[1, 2, 3], b=[4, 5, 6]), pset)
   pred = GeoStatsModels.fitpredict(IDW(), gtb, pset, neighbors=false)
