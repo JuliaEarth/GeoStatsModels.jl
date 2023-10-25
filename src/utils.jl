@@ -16,13 +16,13 @@ function fitpredict(
   neighborhood=nothing
 )
   if neighbors
-    _fitpredictneigh(model, geotable, pdomain; path, point, prob, minneighbors, maxneighbors, distance, neighborhood)
+    _fitpredictneigh(model, geotable, pdomain, path, point, prob, minneighbors, maxneighbors, distance, neighborhood)
   else
-    _fitpredictall(model, geotable, pdomain; path, point, prob)
+    _fitpredictall(model, geotable, pdomain, path, point, prob)
   end
 end
 
-function _fitpredictall(model, geotable, pdomain; path, point, prob)
+function _fitpredictall(model, geotable, pdomain, path, point, prob)
   table = values(geotable)
   ddomain = domain(geotable)
   vars = Tables.schema(table).names
@@ -60,7 +60,7 @@ end
 function _fitpredictneigh(
   model,
   geotable,
-  pdomain;
+  pdomain,
   path,
   point,
   prob,
