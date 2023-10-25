@@ -23,6 +23,8 @@ include("models.jl")
 include("krig.jl")
 include("idw.jl")
 include("lwr.jl")
+
+# utility functions
 include("fitpredict.jl")
 
 export
