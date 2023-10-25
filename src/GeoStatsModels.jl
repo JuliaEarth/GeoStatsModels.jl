@@ -17,8 +17,6 @@ using Tables
 
 using Unitful: AffineQuantity
 
-import StatsAPI: fit, predict
-
 include("models.jl")
 include("krig.jl")
 include("idw.jl")
@@ -31,10 +29,6 @@ export
   # models
   Kriging,
   IDW,
-  LWR,
-  fit,
-  status,
-  predict,
-  predictprob
+  LWR
 
 end
