@@ -7,15 +7,15 @@ function fitpredict(
   geotable::GeoTable,
   pdomain::Domain;
   neighbors=true,
-  # generic kwargs
-  point=true,
-  prob=false,
-  path=LinearPath(),
   # neighbors kwargs
   minneighbors=1,
   maxneighbors=10,
   distance=Euclidean(),
-  neighborhood=nothing
+  neighborhood=nothing,
+  # other kwargs
+  point=true,
+  prob=false,
+  path=LinearPath()
 )
   nobs = nrow(geotable)
   table = values(geotable)
