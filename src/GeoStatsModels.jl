@@ -15,12 +15,15 @@ using Distances
 using Unitful
 using Tables
 
+using Unitful: AffineQuantity
+
 import StatsAPI: fit, predict
 
 include("models.jl")
 include("krig.jl")
 include("idw.jl")
 include("lwr.jl")
+include("fitpredict.jl")
 
 export
   # models
