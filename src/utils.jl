@@ -84,12 +84,9 @@ function _fitpredictneigh(
   # fix neighbors limits
   nobs = nrow(data)
   if maxneighbors > nobs || maxneighbors < 1
-    @warn "Invalid maximum number of neighbors. Adjusting to $nobs..."
     maxneighbors = nobs
   end
-
   if minneighbors > maxneighbors || minneighbors < 1
-    @warn "Invalid minimum number of neighbors. Adjusting to 1..."
     minneighbors = 1
   end
 
