@@ -24,8 +24,9 @@ include("utils.jl")
 
 export
   # models
-  Kriging,
+  NN,
   IDW,
-  LWR
+  LWR,
+  Kriging
 
 end

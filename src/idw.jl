@@ -54,11 +54,7 @@ end
 
 predict(fitted::FittedIDW, var, uₒ) = idw(fitted, weights(fitted, uₒ), var)
 
-function predictprob(fitted::FittedIDW, var, uₒ)
-  w = weights(fitted, uₒ)
-  μ = idw(fitted, w, var)
-  Dirac(μ)
-end
+predictprob(fitted::FittedIDW, var, uₒ) = Dirac(predict(fitted, var, uₒ))
 
 function idw(fitted::FittedIDW, weights, var)
   d = fitted.state.data

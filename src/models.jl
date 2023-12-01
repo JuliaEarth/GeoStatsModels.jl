@@ -47,3 +47,4 @@ function status end
 include("krig.jl")
 include("idw.jl")
 include("lwr.jl")
+include("nn.jl")
