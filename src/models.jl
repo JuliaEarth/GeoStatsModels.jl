@@ -39,3 +39,11 @@ Return the status of the `fitted` model. (e.g. the
 factorization of the linear system was successful)
 """
 function status end
+
+# ----------------
+# IMPLEMENTATIONS
+# ----------------
+
+include("krig.jl")
+include("idw.jl")
+include("lwr.jl")
