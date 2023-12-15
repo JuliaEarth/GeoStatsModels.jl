@@ -4,7 +4,7 @@
 
 function fitpredict(
   model::GeoStatsModel,
-  geotable::GeoTable,
+  geotable::AbstractGeoTable,
   pdomain::Domain;
   path=LinearPath(),
   point=true,
