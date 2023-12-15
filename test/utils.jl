@@ -5,7 +5,11 @@
   @test pred.a == gtb.a
   @test pred.b == gtb.b
   @test pred.geometry == gtb.geometry
-  @test pred == GeoStatsModels.fitpredict(IDW(), view(gtb, 1:3), pset, neighbors=false)
+
+  # also works with views
+  vgtb = view(gtb, 1:3)
+  vpred = GeoStatsModels.fitpredict(IDW(), vgtb, pset, neighbors=false)
+  @test vpred == pred
 
   gtb = georef((; z=[1.0, 0.0, 1.0]), [(25.0, 25.0), (50.0, 75.0), (75.0, 50.0)])
   grid = CartesianGrid((100, 100), (0.5, 0.5), (1.0, 1.0))
