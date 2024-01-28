@@ -1,7 +1,7 @@
 using GeoStatsModels
 using Meshes
 using GeoTables
-using Variography
+using GeoStatsFunctions
 using CoDa
 using Unitful
 using LinearAlgebra

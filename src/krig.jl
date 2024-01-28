@@ -62,7 +62,7 @@ function fit(model::KrigingModel, data)
   FLHS = factorize(model, LHS)
 
   # variance type
-  VARTYPE = Variography.result_type(γ, first(D), first(D))
+  VARTYPE = GeoStatsFunctions.result_type(γ, first(D), first(D))
 
   # record Kriging state
   state = KrigingState(data, FLHS, RHS, VARTYPE)
@@ -83,12 +83,12 @@ function lhs(model::KrigingModel, domain)
 
   # pre-allocate memory for LHS
   u = first(domain)
-  V² = Variography.result_type(γ, u, u)
+  V² = GeoStatsFunctions.result_type(γ, u, u)
   m = nobs + ncon
   G = Matrix{V²}(undef, m, m)
 
   # set variogram/covariance block
-  Variography.pairwise!(G, γ, domain)
+  GeoStatsFunctions.pairwise!(G, γ, domain)
   if isstationary(γ)
     σ² = sill(γ)
     for j in 1:nobs, i in 1:nobs

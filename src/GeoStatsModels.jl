@@ -6,7 +6,7 @@ module GeoStatsModels
 
 using Meshes
 using GeoTables
-using Variography
+using GeoStatsFunctions
 
 using LinearAlgebra
 using Distributions

@@ -1,5 +1,6 @@
 [deps]
 CoDa = "5900dafe-f573-5c72-b367-76665857777b"
+GeoStatsFunctions = "6771c435-bc22-4842-b0c3-41852a255103"
 GeoTables = "e502b557-6362-48c1-8219-d30d308dcdb0"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Meshes = "eacbb407-ea5a-433e-ab97-5258b1ca43fa"
@@ -7,7 +8,6 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
-Variography = "04a0146e-e6df-5636-8d7f-62fa9eb0b20c"
 
 [compat]
 CoDa = "1.0"
