@@ -62,7 +62,7 @@ function fit(model::KrigingModel, data)
   FLHS = factorize(model, LHS)
 
   # variance type
-  VARTYPE = GeoStatsFunctions.result_type(γ, first(D), first(D))
+  VARTYPE = GeoStatsFunctions.returntype(γ, first(D), first(D))
 
   # record Kriging state
   state = KrigingState(data, FLHS, RHS, VARTYPE)
@@ -83,7 +83,7 @@ function lhs(model::KrigingModel, domain)
 
   # pre-allocate memory for LHS
   u = first(domain)
-  V² = GeoStatsFunctions.result_type(γ, u, u)
+  V² = GeoStatsFunctions.returntype(γ, u, u)
   m = nobs + ncon
   G = Matrix{V²}(undef, m, m)
 
