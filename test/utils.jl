@@ -1,5 +1,6 @@
 @testset "fitpredict" begin
-  pset = PointSet([rand(Point{2}) for _ in 1:3])
+  rng = StableRNG(2024)
+  pset = PointSet([rand(rng, Point{2}) for _ in 1:3])
   gtb = georef((a=[1, 2, 3], b=[4, 5, 6]), pset)
   pred = GeoStatsModels.fitpredict(IDW(), gtb, pset, neighbors=false)
   @test pred.a == gtb.a
@@ -16,7 +17,6 @@
   linds = LinearIndices(size(grid))
   variogram = GaussianVariogram(range=35.0, nugget=0.0)
 
-  Random.seed!(2021)
   pred = GeoStatsModels.fitpredict(Kriging(variogram), gtb, grid, maxneighbors=3)
   @test isapprox(pred.z[linds[25, 25]], 1.0, atol=1e-3)
   @test isapprox(pred.z[linds[50, 75]], 0.0, atol=1e-3)

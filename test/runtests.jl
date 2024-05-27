@@ -6,7 +6,7 @@ using CoDa
 using Unitful
 using LinearAlgebra
 using Statistics
-using Test, Random
+using Test, StableRNGs
 
 # list of tests
 testfiles = ["krig.jl", "nn.jl", "idw.jl", "lwr.jl", "utils.jl"]

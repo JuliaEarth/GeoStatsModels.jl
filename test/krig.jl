@@ -1,4 +1,6 @@
 @testset "Kriging" begin
+  rng = StableRNG(2024)
+
   tol = 10 * eps(Float64)
 
   SK = GeoStatsModels.SimpleKriging
@@ -7,11 +9,10 @@
   DK = GeoStatsModels.ExternalDriftKriging
 
   @testset "Basics" begin
-    # create some data
     dim = 3
     nobs = 10
-    pset = PointSet(10 * rand(dim, nobs))
-    data = georef((z=rand(nobs),), pset)
+    pset = PointSet(10 * rand(rng, dim, nobs))
+    data = georef((z=rand(rng, nobs),), pset)
 
     γ = GaussianVariogram(sill=1.0, range=1.0, nugget=0.0)
     simkrig = SK(γ, mean(data.z))
@@ -46,14 +47,14 @@
     end
 
     # save results on a particular location pₒ
-    pₒ = rand(Point{3})
+    pₒ = rand(rng, Point{3})
     skdist = GeoStatsModels.predictprob(sk, :z, pₒ)
     okdist = GeoStatsModels.predictprob(ok, :z, pₒ)
     ukdist = GeoStatsModels.predictprob(uk, :z, pₒ)
     dkdist = GeoStatsModels.predictprob(dk, :z, pₒ)
 
     # Kriging is translation-invariant
-    h = to(rand(Point{3}))
+    h = to(rand(rng, Point{3}))
     pset_h = PointSet([pset[i] + h for i in 1:nelements(pset)])
     data_h = georef((z=data.z,), pset_h)
     sk_h = GeoStatsModels.fit(SK(γ, mean(data_h.z)), data_h)
@@ -95,7 +96,7 @@
     @test var(dkdist_α) ≈ α * var(dkdist)
 
     # Kriging variance is a function of data configuration, not data values
-    δ = rand(nobs)
+    δ = rand(rng, nobs)
     data_δ = georef((z=data.z .+ δ,), pset)
     sk_δ = GeoStatsModels.fit(SK(γ, mean(data_δ.z)), data_δ)
     ok_δ = GeoStatsModels.fit(OK(γ), data_δ)
@@ -129,8 +130,8 @@
   @testset "Stationarity" begin
     dim = 3
     nobs = 10
-    pset = PointSet(10 * rand(dim, nobs))
-    data = georef((z=rand(nobs),), pset)
+    pset = PointSet(10 * rand(rng, dim, nobs))
+    data = georef((z=rand(rng, nobs),), pset)
 
     γ_ns = PowerVariogram()
     ok_ns = GeoStatsModels.fit(OK(γ_ns), data)
@@ -157,15 +158,15 @@
   @testset "Floats" begin
     dim = 3
     nobs = 10
-    X_f = rand(Float32, dim, nobs)
-    z_f = rand(Float32, nobs)
+    X_f = rand(rng, Float32, dim, nobs)
+    z_f = rand(rng, Float32, nobs)
     X_d = Float64.(X_f)
     z_d = Float64.(z_f)
     pset_f = PointSet(X_f)
     data_f = georef((z=z_f,), pset_f)
     pset_d = PointSet(X_d)
     data_d = georef((z=z_d,), pset_d)
-    coords_f = ntuple(i -> rand(Float32), dim)
+    coords_f = ntuple(i -> rand(rng, Float32), dim)
     coords_d = Float64.(coords_f)
     pₒ_f = Point(coords_f)
     pₒ_d = Point(coords_d)
@@ -201,8 +202,8 @@
   @testset "Support" begin
     dim = 2
     nobs = 10
-    pset = PointSet(10 * rand(dim, nobs))
-    data = georef((z=rand(nobs),), pset)
+    pset = PointSet(10 * rand(rng, dim, nobs))
+    data = georef((z=rand(rng, nobs),), pset)
 
     γ = GaussianVariogram(sill=1.0, range=1.0, nugget=0.0)
     sk = GeoStatsModels.fit(SK(γ, mean(data.z)), data)
@@ -226,11 +227,10 @@
   end
 
   @testset "CoDa" begin
-    # create some data
     dim = 2
     nobs = 10
-    pset = PointSet(10 * rand(dim, nobs))
-    table = (z=rand(Composition{3}, nobs),)
+    pset = PointSet(10 * rand(rng, dim, nobs))
+    table = (z=rand(rng, Composition{3}, nobs),)
     data = georef(table, pset)
 
     # basic models
@@ -257,8 +257,8 @@
   @testset "Unitiful" begin
     dim = 3
     nobs = 10
-    pset = PointSet(10 * rand(dim, nobs))
-    data = georef((z=rand(nobs) * u"K",), pset)
+    pset = PointSet(10 * rand(rng, dim, nobs))
+    data = georef((z=rand(rng, nobs) * u"K",), pset)
 
     γ = GaussianVariogram(sill=1.0u"K^2")
     sk = GeoStatsModels.fit(SK(γ, mean(data.z)), data)
