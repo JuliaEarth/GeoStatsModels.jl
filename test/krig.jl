@@ -46,14 +46,14 @@
     end
 
     # save results on a particular location pₒ
-    pₒ = rand(Point3)
+    pₒ = rand(Point{3})
     skdist = GeoStatsModels.predictprob(sk, :z, pₒ)
     okdist = GeoStatsModels.predictprob(ok, :z, pₒ)
     ukdist = GeoStatsModels.predictprob(uk, :z, pₒ)
     dkdist = GeoStatsModels.predictprob(dk, :z, pₒ)
 
     # Kriging is translation-invariant
-    h = rand(Vec3)
+    h = rand(Vec{3,typeof(1.0u"m")})
     pset_h = PointSet([pset[i] + h for i in 1:nelements(pset)])
     data_h = georef((z=data.z,), pset_h)
     sk_h = GeoStatsModels.fit(SK(γ, mean(data_h.z)), data_h)
@@ -165,8 +165,10 @@
     data_f = georef((z=z_f,), pset_f)
     pset_d = PointSet(X_d)
     data_d = georef((z=z_d,), pset_d)
-    pₒ_f = rand(Point{dim,Float32})
-    pₒ_d = convert(Point{dim,Float64}, pₒ_f)
+    coords_f = ntuple(i -> rand(Float32), dim)
+    coords_d = Float64.(coords_f)
+    pₒ_f = Point(coords_f)
+    pₒ_d = Point(coords_d)
     γ_f = GaussianVariogram(sill=1.0f0, range=1.0f0, nugget=0.0f0)
     sk_f = GeoStatsModels.fit(SK(γ_f, mean(data_f.z)), data_f)
     ok_f = GeoStatsModels.fit(OK(γ_f), data_f)

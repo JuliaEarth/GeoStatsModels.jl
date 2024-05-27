@@ -46,7 +46,7 @@ function fit(model::LWR, data)
   Ω = domain(data)
   n = nelements(Ω)
 
-  x(i) = coordinates(centroid(Ω, i))
+  x(i) = to(centroid(Ω, i))
 
   # coordinates matrix
   X = mapreduce(x, hcat, 1:n)
@@ -82,11 +82,11 @@ function matrices(fitted::FittedLWR, var, uₒ)
   c = Tables.columns(values(d))
   z = Tables.getcolumn(c, var)
 
-  X = fitted.state.X
+  X = ustrip.(fitted.state.X)
   W = wmatrix(fitted, uₒ)
   A = X' * W * X
 
-  xₒ = coordinates(uₒ)
+  xₒ = ustrip.(to(uₒ))
   x = [one(eltype(xₒ)); xₒ]
 
   X, W, A, x, z
@@ -99,8 +99,8 @@ function wmatrix(fitted::FittedLWR, uₒ)
   Ω = domain(d)
   n = nelements(Ω)
 
-  xₒ = coordinates(uₒ)
-  x(i) = coordinates(centroid(Ω, i))
+  xₒ = to(uₒ)
+  x(i) = to(centroid(Ω, i))
 
   δs = map(i -> δ(xₒ, x(i)), 1:n)
   ws = w.(δs / maximum(δs))

@@ -49,7 +49,7 @@ function set_constraints_lhs!(model::UniversalKriging, LHS::AbstractMatrix, doma
 
   # set polynomial drift blocks
   for i in 1:nobs
-    x = coordinates(centroid(domain, i))
+    x = ustrip.(to(centroid(domain, i)))
     for j in 1:nterms
       LHS[nobs + j, i] = prod(x .^ exponents[:, j])
       LHS[i, nobs + j] = LHS[nobs + j, i]
@@ -69,7 +69,7 @@ function set_constraints_rhs!(fitted::FittedKriging{<:UniversalKriging}, uₒ)
   nterms = size(exponents, 2)
 
   # set polynomial drift
-  xₒ = coordinates(centroid(uₒ))
+  xₒ = ustrip.(to(centroid(uₒ)))
   for j in 1:nterms
     RHS[nobs + j] = prod(xₒ .^ exponents[:, j])
   end
