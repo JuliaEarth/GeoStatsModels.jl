@@ -82,11 +82,12 @@ function matrices(fitted::FittedLWR, var, uₒ)
   c = Tables.columns(values(d))
   z = Tables.getcolumn(c, var)
 
+  u = unit(eltype(fitted.state.X))
   X = ustrip.(fitted.state.X)
   W = wmatrix(fitted, uₒ)
   A = X' * W * X
 
-  xₒ = ustrip.(to(uₒ))
+  xₒ = ustrip.(u, to(uₒ))
   x = [one(eltype(xₒ)); xₒ]
 
   X, W, A, x, z
