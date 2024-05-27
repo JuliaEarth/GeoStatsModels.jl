@@ -53,7 +53,7 @@
     dkdist = GeoStatsModels.predictprob(dk, :z, pₒ)
 
     # Kriging is translation-invariant
-    h = to(rand(Point{3})
+    h = to(rand(Point{3}))
     pset_h = PointSet([pset[i] + h for i in 1:nelements(pset)])
     data_h = georef((z=data.z,), pset_h)
     sk_h = GeoStatsModels.fit(SK(γ, mean(data_h.z)), data_h)
