@@ -56,8 +56,8 @@ function distances(fitted::FittedNN, uₒ)
   d = fitted.state.data
   Ω = domain(d)
 
-  xₒ = coordinates(uₒ)
-  x(i) = coordinates(centroid(Ω, i))
+  xₒ = to(uₒ)
+  x(i) = to(centroid(Ω, i))
 
   λ(i) = δ(xₒ, x(i))
 

@@ -1,5 +1,5 @@
 @testset "fitpredict" begin
-  pset = PointSet(rand(Point2, 3))
+  pset = PointSet([rand(Point{2}) for _ in 1:3])
   gtb = georef((a=[1, 2, 3], b=[4, 5, 6]), pset)
   pred = GeoStatsModels.fitpredict(IDW(), gtb, pset, neighbors=false)
   @test pred.a == gtb.a

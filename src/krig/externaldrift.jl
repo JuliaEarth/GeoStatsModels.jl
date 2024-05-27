@@ -30,7 +30,7 @@ function set_constraints_lhs!(model::ExternalDriftKriging, LHS::AbstractMatrix, 
 
   # set external drift blocks
   for i in 1:nobs
-    x = coordinates(centroid(domain, i))
+    x = to(centroid(domain, i))
     for j in 1:ndrifts
       LHS[nobs + j, i] = drifts[j](x)
       LHS[i, nobs + j] = LHS[nobs + j, i]
@@ -49,7 +49,7 @@ function set_constraints_rhs!(fitted::FittedKriging{<:ExternalDriftKriging}, u�
   nobs = nrow(fitted.state.data)
 
   # set external drift
-  xₒ = coordinates(centroid(uₒ))
+  xₒ = to(centroid(uₒ))
   for (j, m) in enumerate(drifts)
     RHS[nobs + j] = m(xₒ)
   end
