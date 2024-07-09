@@ -11,7 +11,8 @@
   @testset "Basics" begin
     dim = 3
     nobs = 10
-    pset = PointSet(10 * rand(rng, dim, nobs))
+    cmat = 10 * rand(rng, dim, nobs)
+    pset = PointSet(Tuple.(eachcol(cmat)))
     data = georef((z=rand(rng, nobs),), pset)
 
     γ = GaussianVariogram(sill=1.0, range=1.0, nugget=0.0)
@@ -130,7 +131,8 @@
   @testset "Stationarity" begin
     dim = 3
     nobs = 10
-    pset = PointSet(10 * rand(rng, dim, nobs))
+    cmat = 10 * rand(rng, dim, nobs)
+    pset = PointSet(Tuple.(eachcol(cmat)))
     data = georef((z=rand(rng, nobs),), pset)
 
     γ_ns = PowerVariogram()
@@ -162,9 +164,9 @@
     z_f = rand(rng, Float32, nobs)
     X_d = Float64.(X_f)
     z_d = Float64.(z_f)
-    pset_f = PointSet(X_f)
+    pset_f = PointSet(Tuple.(eachcol(X_f)))
     data_f = georef((z=z_f,), pset_f)
-    pset_d = PointSet(X_d)
+    pset_d = PointSet(Tuple.(eachcol(X_d)))
     data_d = georef((z=z_d,), pset_d)
     coords_f = ntuple(i -> rand(rng, Float32), dim)
     coords_d = Float64.(coords_f)
@@ -202,7 +204,8 @@
   @testset "Support" begin
     dim = 2
     nobs = 10
-    pset = PointSet(10 * rand(rng, dim, nobs))
+    cmat = 10 * rand(rng, dim, nobs)
+    pset = PointSet(Tuple.(eachcol(cmat)))
     data = georef((z=rand(rng, nobs),), pset)
 
     γ = GaussianVariogram(sill=1.0, range=1.0, nugget=0.0)
@@ -229,7 +232,8 @@
   @testset "CoDa" begin
     dim = 2
     nobs = 10
-    pset = PointSet(10 * rand(rng, dim, nobs))
+    cmat = 10 * rand(rng, dim, nobs)
+    pset = PointSet(Tuple.(eachcol(cmat)))
     table = (z=rand(rng, Composition{3}, nobs),)
     data = georef(table, pset)
 
@@ -257,7 +261,8 @@
   @testset "Unitiful" begin
     dim = 3
     nobs = 10
-    pset = PointSet(10 * rand(rng, dim, nobs))
+    cmat = 10 * rand(rng, dim, nobs)
+    pset = PointSet(Tuple.(eachcol(cmat)))
     data = georef((z=rand(rng, nobs) * u"K",), pset)
 
     γ = GaussianVariogram(sill=1.0u"K^2")
