@@ -1,6 +1,6 @@
 @testset "fitpredict" begin
   rng = StableRNG(2024)
-  pset = PointSet([rand(rng, Point{2}) for _ in 1:3])
+  pset = PointSet(rand(rng, Point, 3))
   gtb = georef((a=[1, 2, 3], b=[4, 5, 6]), pset)
   pred = GeoStatsModels.fitpredict(IDW(), gtb, pset, neighbors=false)
   @test pred.a == gtb.a
