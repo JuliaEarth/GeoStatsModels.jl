@@ -87,7 +87,7 @@ function matrices(fitted::FittedLWR, var, uₒ)
   W = wmatrix(fitted, uₒ)
   A = X' * W * X
 
-  xₒ = ustrip.(u, to(uₒ))
+  xₒ = ustrip.(u, to(centroid(uₒ)))
   x = [one(eltype(xₒ)); xₒ]
 
   X, W, A, x, z
@@ -100,7 +100,7 @@ function wmatrix(fitted::FittedLWR, uₒ)
   Ω = domain(d)
   n = nelements(Ω)
 
-  xₒ = to(uₒ)
+  xₒ = to(centroid(uₒ))
   x(i) = to(centroid(Ω, i))
 
   δs = map(i -> δ(xₒ, x(i)), 1:n)
