@@ -44,7 +44,8 @@ function status end
 # IMPLEMENTATIONS
 # ----------------
 
-include("krig.jl")
+include("nn.jl")
 include("idw.jl")
 include("lwr.jl")
-include("nn.jl")
+include("poly.jl")
+include("krig.jl")

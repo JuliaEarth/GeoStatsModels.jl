@@ -27,6 +27,7 @@ export
   NN,
   IDW,
   LWR,
+  Polynomial,
   Kriging
 
 end
