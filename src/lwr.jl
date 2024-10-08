@@ -46,10 +46,10 @@ function fit(model::LWR, data)
   Ω = domain(data)
   n = nelements(Ω)
 
-  x(i) = to(centroid(Ω, i))
+  x(i) = CoordRefSystems.raw(coords(centroid(Ω, i)))
 
   # coordinates matrix
-  X = mapreduce(x, hcat, 1:n)
+  X = stack(x, 1:n)
   X = [ones(eltype(X), n) X']
 
   # record state
@@ -82,13 +82,15 @@ function matrices(fitted::FittedLWR, var, uₒ)
   c = Tables.columns(values(d))
   z = Tables.getcolumn(c, var)
 
-  u = unit(eltype(fitted.state.X))
-  X = ustrip.(fitted.state.X)
-  W = wmatrix(fitted, uₒ)
+  # adjust CRS of uₒ
+  uₒ′ = uₒ |> Proj(crs(domain(d)))
+
+  X = fitted.state.X
+  W = wmatrix(fitted, uₒ′)
   A = X' * W * X
 
-  xₒ = ustrip.(u, to(centroid(uₒ)))
-  x = [one(eltype(xₒ)); xₒ]
+  xₒ = CoordRefSystems.raw(coords(centroid(uₒ′)))
+  x = [one(eltype(xₒ)), xₒ...]
 
   X, W, A, x, z
 end

@@ -6,6 +6,7 @@ module GeoStatsModels
 
 using Meshes
 using GeoTables
+using CoordRefSystems
 using GeoStatsFunctions
 
 using LinearAlgebra

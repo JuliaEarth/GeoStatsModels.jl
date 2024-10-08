@@ -5,6 +5,7 @@ using CoordRefSystems
 using GeoStatsFunctions
 using CoDa
 using Unitful
+using Distances
 using LinearAlgebra
 using Statistics
 using Test, StableRNGs
