@@ -9,7 +9,7 @@
     pred = GeoStatsModels.predict(nn, :z, Point(2.5))
     @test pred == "c"
 
-    d = georef((; z=["a", "b", "c"]), [Point(LatLon(0, 1)), Point(LatLon(0, 2)), Point(LatLon(0, 3))])
+    d = georef((; z=["a", "b", "c"]), Point.([LatLon(0, 1), LatLon(0, 2), LatLon(0, 3)]))
     nn = GeoStatsModels.fit(NN(Haversine()), d)
     pred = GeoStatsModels.predict(nn, :z, Point(LatLon(0, 0.8)))
     @test pred == "a"
