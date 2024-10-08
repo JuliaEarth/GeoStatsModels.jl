@@ -1,6 +1,7 @@
 using GeoStatsModels
 using Meshes
 using GeoTables
+using CoordRefSystems
 using GeoStatsFunctions
 using CoDa
 using Unitful

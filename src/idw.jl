@@ -78,10 +78,10 @@ function weights(fitted::FittedIDW, uₒ)
   d = fitted.state.data
   Ω = domain(d)
 
-  xₒ = to(centroid(uₒ))
-  x(i) = to(centroid(Ω, i))
+  xₒ = centroid(uₒ)
+  x(i) = centroid(Ω, i)
 
-  λ(i) = 1 / δ(xₒ, x(i)) ^ e
+  λ(i) = 1 / evaluate(δ, xₒ, x(i)) ^ e
 
   map(λ, 1:nelements(Ω))
 end
