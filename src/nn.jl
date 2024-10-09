@@ -56,10 +56,10 @@ function distances(fitted::FittedNN, uₒ)
   d = fitted.state.data
   Ω = domain(d)
 
-  xₒ = to(centroid(uₒ))
-  x(i) = to(centroid(Ω, i))
+  xₒ = centroid(uₒ)
+  x(i) = centroid(Ω, i)
 
-  λ(i) = δ(xₒ, x(i))
+  λ(i) = evaluate(δ, xₒ, x(i))
 
   map(λ, 1:nelements(Ω))
 end

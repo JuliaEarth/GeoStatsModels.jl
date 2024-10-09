@@ -1,5 +1,7 @@
 [deps]
 CoDa = "5900dafe-f573-5c72-b367-76665857777b"
+CoordRefSystems = "b46f11dc-f210-4604-bfba-323c1ec968cb"
+Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
 GeoStatsFunctions = "6771c435-bc22-4842-b0c3-41852a255103"
 GeoTables = "e502b557-6362-48c1-8219-d30d308dcdb0"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"

@@ -5,6 +5,7 @@ version = "0.5.1"
 
 [deps]
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
+CoordRefSystems = "b46f11dc-f210-4604-bfba-323c1ec968cb"
 Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 GeoStatsFunctions = "6771c435-bc22-4842-b0c3-41852a255103"
@@ -17,6 +18,7 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [compat]
 Combinatorics = "1.0"
+CoordRefSystems = "0.15"
 Distances = "0.10"
 Distributions = "0.25"
 GeoStatsFunctions = "0.4"
