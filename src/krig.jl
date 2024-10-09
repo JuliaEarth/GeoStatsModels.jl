@@ -186,9 +186,13 @@ Weights λ (and Lagrange multipliers ν) for the
 Kriging `model` at geometry `uₒ`.
 """
 function weights(fitted::FittedKriging, uₒ)
+  dom = domain(fitted.state.data)
   nobs = nrow(fitted.state.data)
 
-  set_rhs!(fitted, uₒ)
+  # adjust CRS of uₒ
+  uₒ′ = uₒ |> Proj(crs(dom))
+
+  set_rhs!(fitted, uₒ′)
 
   # solve Kriging system
   s = fitted.state.LHS \ fitted.state.RHS

@@ -6,14 +6,15 @@
     ExternalDriftKriging(γ, drifts)
 
 External Drift Kriging with variogram model `γ` and
-external `drifts` functions.
+external `drifts` functions. A drift function `p -> v`
+maps a point `p` to a value `v`.
 
 ### Notes
 
 * External drift functions should be smooth
 * Kriging system with external drift is often unstable
-* Include a constant drift (e.g. `x->1`) for unbiased estimation
-* [`OrdinaryKriging`](@ref) is recovered for `drifts = [x->1]`
+* Include a constant drift (e.g. `p -> 1`) for unbiased estimation
+* [`OrdinaryKriging`](@ref) is recovered for `drifts = [p -> 1]`
 * For polynomial mean, see [`UniversalKriging`](@ref)
 """
 struct ExternalDriftKriging{G<:Variogram,D} <: KrigingModel
@@ -30,9 +31,9 @@ function set_constraints_lhs!(model::ExternalDriftKriging, LHS::AbstractMatrix, 
 
   # set external drift blocks
   for i in 1:nobs
-    x = to(centroid(domain, i))
+    p = centroid(domain, i)
     for j in 1:ndrifts
-      LHS[nobs + j, i] = drifts[j](x)
+      LHS[nobs + j, i] = drifts[j](p)
       LHS[i, nobs + j] = LHS[nobs + j, i]
     end
   end
@@ -49,9 +50,9 @@ function set_constraints_rhs!(fitted::FittedKriging{<:ExternalDriftKriging}, u�
   nobs = nrow(fitted.state.data)
 
   # set external drift
-  xₒ = to(centroid(uₒ))
+  pₒ = centroid(uₒ)
   for (j, m) in enumerate(drifts)
-    RHS[nobs + j] = m(xₒ)
+    RHS[nobs + j] = m(pₒ)
   end
 
   nothing

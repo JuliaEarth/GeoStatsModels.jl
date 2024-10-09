@@ -102,10 +102,10 @@ function wmatrix(fitted::FittedLWR, uₒ)
   Ω = domain(d)
   n = nelements(Ω)
 
-  xₒ = centroid(uₒ)
-  x(i) = centroid(Ω, i)
+  pₒ = centroid(uₒ)
+  p(i) = centroid(Ω, i)
 
-  δs = map(i -> evaluate(δ, xₒ, x(i)), 1:n)
+  δs = map(i -> evaluate(δ, pₒ, p(i)), 1:n)
   ws = w.(δs / maximum(δs))
 
   Diagonal(ws)

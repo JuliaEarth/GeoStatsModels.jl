@@ -6,7 +6,7 @@
     UniversalKriging(γ, degree, dim)
 
 Universal Kriging with variogram model `γ` and polynomial
-`degree` on a geospatial domain of dimension `dim`.
+of given `degree` on `dim` coordinates.
 
 ### Notes
 
@@ -49,7 +49,7 @@ function set_constraints_lhs!(model::UniversalKriging, LHS::AbstractMatrix, doma
 
   # set polynomial drift blocks
   for i in 1:nobs
-    x = ustrip.(to(centroid(domain, i)))
+    x = CoordRefSystems.raw(coords(centroid(domain, i)))
     for j in 1:nterms
       LHS[nobs + j, i] = prod(x .^ exponents[:, j])
       LHS[i, nobs + j] = LHS[nobs + j, i]
@@ -65,13 +65,11 @@ end
 function set_constraints_rhs!(fitted::FittedKriging{<:UniversalKriging}, uₒ)
   exponents = fitted.model.exponents
   RHS = fitted.state.RHS
-  dom = domain(fitted.state.data)
   nobs = nrow(fitted.state.data)
   nterms = size(exponents, 2)
 
   # set polynomial drift
-  u = unit(Meshes.lentype(dom))
-  xₒ = ustrip.(u, to(centroid(uₒ)))
+  xₒ = CoordRefSystems.raw(coords(centroid(uₒ)))
   for j in 1:nterms
     RHS[nobs + j] = prod(xₒ .^ exponents[:, j])
   end
