@@ -13,9 +13,9 @@ end
 
 Polynomial() = Polynomial(1)
 
-struct PolynomialState{D,U}
-  coeffs::D
-  lenunit::U
+struct PolynomialState{D<:AbstractGeoTable,C}
+  data::D
+  coeffs::C
 end
 
 struct FittedPolynomial{M<:Polynomial,S<:PolynomialState}
@@ -35,7 +35,7 @@ function fit(model::Polynomial, data)
   D = domain(data)
 
   # multivariate Vandermonde matrix
-  x(i) = ustrip.(to(centroid(D, i)))
+  x(i) = CoordRefSystems.raw(coords(centroid(D, i)))
   xs = (x(i) for i in 1:nelements(D))
   V = vandermonde(xs, d)
 
@@ -49,11 +49,8 @@ function fit(model::Polynomial, data)
     P * Tables.getcolumn(cols, var)
   end
 
-  # length units of coordinates
-  lenunit = unit(Meshes.lentype(D))
-
   # record state
-  state = PolynomialState(Dict(vars .=> coeffs), lenunit)
+  state = PolynomialState(data, Dict(vars .=> coeffs))
 
   # return fitted model
   FittedPolynomial(model, state)
@@ -69,9 +66,11 @@ predictprob(fitted::FittedPolynomial, var, uₒ) = Dirac(predict(fitted, var, u�
 
 function evalpoly(fitted::FittedPolynomial, var, uₒ)
   θ = fitted.state.coeffs
-  u = fitted.state.lenunit
   d = fitted.model.degree
-  xₒ = ustrip.(u, to(centroid(uₒ)))
+  D = domain(fitted.state.data)
+  # adjust CRS of uₒ
+  uₒ′ = uₒ |> Proj(crs(D))
+  xₒ = CoordRefSystems.raw(coords(centroid(uₒ′)))
   V = vandermonde((xₒ,), d)
   first(V * θ[var])
 end
