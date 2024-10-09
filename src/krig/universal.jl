@@ -65,15 +65,11 @@ end
 function set_constraints_rhs!(fitted::FittedKriging{<:UniversalKriging}, uₒ)
   exponents = fitted.model.exponents
   RHS = fitted.state.RHS
-  dom = domain(fitted.state.data)
   nobs = nrow(fitted.state.data)
   nterms = size(exponents, 2)
 
-  # adjust CRS of uₒ
-  uₒ′ = uₒ |> Proj(crs(dom))
-
   # set polynomial drift
-  xₒ = CoordRefSystems.raw(coords(centroid(uₒ′)))
+  xₒ = CoordRefSystems.raw(coords(centroid(uₒ)))
   for j in 1:nterms
     RHS[nobs + j] = prod(xₒ .^ exponents[:, j])
   end

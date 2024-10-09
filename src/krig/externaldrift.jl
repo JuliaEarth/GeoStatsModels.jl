@@ -47,14 +47,10 @@ end
 function set_constraints_rhs!(fitted::FittedKriging{<:ExternalDriftKriging}, uₒ)
   drifts = fitted.model.drifts
   RHS = fitted.state.RHS
-  dom = domain(fitted.state.data)
   nobs = nrow(fitted.state.data)
 
-  # adjust CRS of uₒ
-  uₒ′ = uₒ |> Proj(crs(dom))
-
   # set external drift
-  pₒ = centroid(uₒ′)
+  pₒ = centroid(uₒ)
   for (j, m) in enumerate(drifts)
     RHS[nobs + j] = m(pₒ)
   end

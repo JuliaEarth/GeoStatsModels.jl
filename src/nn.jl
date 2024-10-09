@@ -56,7 +56,10 @@ function distances(fitted::FittedNN, uₒ)
   d = fitted.state.data
   Ω = domain(d)
 
-  pₒ = centroid(uₒ)
+  # adjust CRS of uₒ
+  uₒ′ = uₒ |> Proj(crs(Ω))
+
+  pₒ = centroid(uₒ′)
   p(i) = centroid(Ω, i)
 
   λ(i) = evaluate(δ, pₒ, p(i))
