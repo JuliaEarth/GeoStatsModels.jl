@@ -6,13 +6,14 @@
     ExternalDriftKriging(γ, drifts)
 
 External Drift Kriging with variogram model `γ` and
-external `drifts` functions.
+external `drifts` functions. A drift function `p -> v`
+maps a point `p` to a value `v`.
 
 ### Notes
 
 * External drift functions should be smooth
 * Kriging system with external drift is often unstable
-* Include a constant drift `x->v`, where `x` is a point and `v` a number (e.g. `x->1`), for unbiased estimation
+* Include a constant drift (e.g. `x->1`), for unbiased estimation
 * [`OrdinaryKriging`](@ref) is recovered for `drifts = [x->1]`
 * For polynomial mean, see [`UniversalKriging`](@ref)
 """
