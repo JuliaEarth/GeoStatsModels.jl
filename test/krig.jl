@@ -128,7 +128,7 @@
 
     # latlon coordinates
     pts = Point.([LatLon(0, 0), LatLon(0, 1), LatLon(1, 0)])
-    data = georef((; z=[1, 2, 3]), pts)
+    data = georef((; z=rand(rng, 3)), pts)
     sk = GeoStatsModels.fit(SK(γ, mean(data.z)), data)
     ok = GeoStatsModels.fit(OK(γ), data)
     uk = GeoStatsModels.fit(UK(γ, 1, 2), data)
