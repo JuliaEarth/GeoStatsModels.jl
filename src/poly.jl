@@ -65,9 +65,9 @@ predict(fitted::FittedPolynomial, var, uₒ) = evalpoly(fitted, var, uₒ)
 predictprob(fitted::FittedPolynomial, var, uₒ) = Dirac(predict(fitted, var, uₒ))
 
 function evalpoly(fitted::FittedPolynomial, var, uₒ)
+  D = domain(fitted.state.data)
   θ = fitted.state.coeffs
   d = fitted.model.degree
-  D = domain(fitted.state.data)
   # adjust CRS of uₒ
   uₒ′ = uₒ |> Proj(crs(D))
   xₒ = CoordRefSystems.raw(coords(centroid(uₒ′)))
