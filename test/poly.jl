@@ -42,6 +42,16 @@
     @test propertynames(t̄) == (:a, :b)
     @test eltype(t̄.a) == Float64
     @test eltype(t̄.b) == Float64
+
+    # latlon coordinates
+    d = georef((; z=[1, 2, 3]), Point.([LatLon(0, 0), LatLon(0, 1), LatLon(1, 0)]))
+    poly = GeoStatsModels.fit(Polynomial(), d)
+    pred = GeoStatsModels.predict(poly, :z, Point(LatLon(0, 0)))
+    @test pred ≈ 1
+    pred = GeoStatsModels.predict(poly, :z, Point(LatLon(0, 1)))
+    @test pred ≈ 2
+    pred = GeoStatsModels.predict(poly, :z, Point(LatLon(1, 0)))
+    @test pred ≈ 3
   end
 
   @testset "Unitful" begin

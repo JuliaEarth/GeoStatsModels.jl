@@ -125,6 +125,26 @@
     dkdist_c = GeoStatsModels.predictprob(dk_c, :z, pₒ)
     @test mean(okdist) ≈ mean(dkdist_c)
     @test var(okdist) ≈ var(dkdist_c)
+
+    # latlon coordinates
+    pts = Point.([LatLon(0, 0), LatLon(0, 1), LatLon(1, 0)])
+    data = georef((; z=[1, 2, 3]), pts)
+    sk = GeoStatsModels.fit(SK(γ, mean(data.z)), data)
+    ok = GeoStatsModels.fit(OK(γ), data)
+    uk = GeoStatsModels.fit(UK(γ, 1, 2), data)
+    dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
+    for i in 1:3
+      skdist = GeoStatsModels.predictprob(sk, :z, pts[i])
+      okdist = GeoStatsModels.predictprob(ok, :z, pts[i])
+      ukdist = GeoStatsModels.predictprob(uk, :z, pts[i])
+      dkdist = GeoStatsModels.predictprob(dk, :z, pts[i])
+
+      # mean checks
+      @test mean(skdist) ≈ data.z[i]
+      @test mean(okdist) ≈ data.z[i]
+      @test mean(ukdist) ≈ data.z[i]
+      @test mean(dkdist) ≈ data.z[i]
+    end
   end
 
   # non-stationary variograms are allowed

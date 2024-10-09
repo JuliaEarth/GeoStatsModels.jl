@@ -11,6 +11,7 @@
     #pred = GeoStatsModels.predict(lwr, :z, Point(0.0))
     #@test unit(pred) == u"K"
 
+    # latlon coordinates
     d = georef((; z=[1.0, 0.0, 1.0]), Point.([LatLon(0, 0), LatLon(0, 1), LatLon(1, 0)]))
     lwr = GeoStatsModels.fit(LWR(h -> exp(-3 * h^2), Haversine()), d)
     pred = GeoStatsModels.predict(lwr, :z, Point(LatLon(0, 0)))
