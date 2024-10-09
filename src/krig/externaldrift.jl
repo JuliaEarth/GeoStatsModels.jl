@@ -13,8 +13,8 @@ maps a point `p` to a value `v`.
 
 * External drift functions should be smooth
 * Kriging system with external drift is often unstable
-* Include a constant drift (e.g. `x->1`), for unbiased estimation
-* [`OrdinaryKriging`](@ref) is recovered for `drifts = [x->1]`
+* Include a constant drift (e.g. `p -> 1`), for unbiased estimation
+* [`OrdinaryKriging`](@ref) is recovered for `drifts = [p -> 1]`
 * For polynomial mean, see [`UniversalKriging`](@ref)
 """
 struct ExternalDriftKriging{G<:Variogram,D} <: KrigingModel
