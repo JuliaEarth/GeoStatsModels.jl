@@ -62,7 +62,7 @@ function fit(model::KrigingModel, data)
   FLHS = factorize(model, LHS)
 
   # variance type
-  VARTYPE = GeoStatsFunctions.returntype(γ, first(D), first(D))
+  VARTYPE, _ = GeoStatsFunctions.matrixparams(γ, D)
 
   # record Kriging state
   state = KrigingState(data, FLHS, RHS, VARTYPE)
@@ -78,20 +78,18 @@ Return LHS of Kriging system for the elements in the `domain`.
 """
 function lhs(model::KrigingModel, domain)
   γ = model.γ
-  nobs = nelements(domain)
-  ncon = nconstraints(model)
+  V, (_, nobs, nvars) = GeoStatsFunctions.matrixparams(γ, domain)
 
   # pre-allocate memory for LHS
-  u = first(domain)
-  V² = GeoStatsFunctions.returntype(γ, u, u)
-  m = nobs + ncon
-  G = Matrix{V²}(undef, m, m)
+  nmat = nobs * nvars
+  ncon = nconstraints(model)
+  G = Matrix{V}(undef, nmat + ncon, nmat + ncon)
 
   # set variogram/covariance block
   GeoStatsFunctions.pairwise!(G, γ, domain)
   if isstationary(γ)
     σ² = sill(γ)
-    for j in 1:nobs, i in 1:nobs
+    for j in 1:nmat, i in 1:nmat
       @inbounds G[i, j] = σ² - G[i, j]
     end
   end
@@ -163,7 +161,7 @@ with Kriging `weights`.
 function predictvar(fitted::FittedKriging, weights::KrigingWeights)
   γ = fitted.model.γ
   b = fitted.state.RHS
-  V² = fitted.state.VARTYPE
+  V = fitted.state.VARTYPE
   λ = weights.λ
   ν = weights.ν
 
@@ -174,9 +172,9 @@ function predictvar(fitted::FittedKriging, weights::KrigingWeights)
   c₂ = view(b, (n + 1):m) ⋅ ν
   c = c₁ + c₂
 
-  σ² = isstationary(γ) ? sill(γ) - V²(c) : V²(c)
+  σ² = isstationary(γ) ? sill(γ) - V(c) : V(c)
 
-  max(zero(V²), σ²)
+  max(zero(V), σ²)
 end
 
 """
