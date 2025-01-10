@@ -28,7 +28,7 @@ nconstraints(::SimpleKriging) = 0
 
 set_constraints_lhs!(::SimpleKriging, LHS::AbstractMatrix, domain) = nothing
 
-set_constraints_rhs!(::FittedKriging{<:SimpleKriging}, uₒ) = nothing
+set_constraints_rhs!(::FittedKriging{<:SimpleKriging}, gₒ) = nothing
 
 function predictmean(fitted::FittedKriging{<:SimpleKriging}, weights::KrigingWeights, var)
   μ = fitted.model.μ

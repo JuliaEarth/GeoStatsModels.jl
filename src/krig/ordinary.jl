@@ -21,7 +21,7 @@ function set_constraints_lhs!(::OrdinaryKriging, LHS::AbstractMatrix, domain)
   nothing
 end
 
-function set_constraints_rhs!(fitted::FittedKriging{<:OrdinaryKriging}, uₒ)
+function set_constraints_rhs!(fitted::FittedKriging{<:OrdinaryKriging}, gₒ)
   RHS = fitted.state.RHS
   RHS[end] = one(eltype(RHS))
   nothing

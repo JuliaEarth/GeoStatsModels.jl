@@ -236,11 +236,11 @@
     dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
 
     # predict on a quadrangle
-    uₒ = Quadrangle((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0))
-    skdist = GeoStatsModels.predictprob(sk, :z, uₒ)
-    okdist = GeoStatsModels.predictprob(ok, :z, uₒ)
-    ukdist = GeoStatsModels.predictprob(uk, :z, uₒ)
-    dkdist = GeoStatsModels.predictprob(dk, :z, uₒ)
+    gₒ = Quadrangle((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0))
+    skdist = GeoStatsModels.predictprob(sk, :z, gₒ)
+    okdist = GeoStatsModels.predictprob(ok, :z, gₒ)
+    ukdist = GeoStatsModels.predictprob(uk, :z, gₒ)
+    dkdist = GeoStatsModels.predictprob(dk, :z, gₒ)
 
     # variance checks
     @test var(skdist) ≥ 0
@@ -266,11 +266,11 @@
     dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
 
     # prediction on a quadrangle
-    uₒ = Quadrangle((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0))
-    skmean = GeoStatsModels.predict(sk, :z, uₒ)
-    okmean = GeoStatsModels.predict(ok, :z, uₒ)
-    ukmean = GeoStatsModels.predict(uk, :z, uₒ)
-    dkmean = GeoStatsModels.predict(dk, :z, uₒ)
+    gₒ = Quadrangle((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0))
+    skmean = GeoStatsModels.predict(sk, :z, gₒ)
+    okmean = GeoStatsModels.predict(ok, :z, gₒ)
+    ukmean = GeoStatsModels.predict(uk, :z, gₒ)
+    dkmean = GeoStatsModels.predict(dk, :z, gₒ)
 
     # type tests
     @test skmean isa Composition

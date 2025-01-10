@@ -62,14 +62,14 @@ function set_constraints_lhs!(model::UniversalKriging, LHS::AbstractMatrix, doma
   nothing
 end
 
-function set_constraints_rhs!(fitted::FittedKriging{<:UniversalKriging}, uₒ)
+function set_constraints_rhs!(fitted::FittedKriging{<:UniversalKriging}, gₒ)
   exponents = fitted.model.exponents
   RHS = fitted.state.RHS
   nobs = nrow(fitted.state.data)
   nterms = size(exponents, 2)
 
   # set polynomial drift
-  xₒ = CoordRefSystems.raw(coords(centroid(uₒ)))
+  xₒ = CoordRefSystems.raw(coords(centroid(gₒ)))
   for j in 1:nterms
     RHS[nobs + j] = prod(xₒ .^ exponents[:, j])
   end

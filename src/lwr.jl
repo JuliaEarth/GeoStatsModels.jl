@@ -65,46 +65,46 @@ end
 # PREDICTION STEP
 #-----------------
 
-predict(fitted::FittedLWR, var, uₒ) = predictmean(fitted, var, uₒ)
+predict(fitted::FittedLWR, var, gₒ) = predictmean(fitted, var, gₒ)
 
-function predictprob(fitted::FittedLWR, var, uₒ)
-  X, W, A, x, z = matrices(fitted, var, uₒ)
+function predictprob(fitted::FittedLWR, var, gₒ)
+  X, W, A, x, z = matrices(fitted, var, gₒ)
   μ = lwrmean(X, W, A, x, z)
   σ² = lwrvar(X, W, A, x)
   Normal(μ, √σ²)
 end
 
-function predictmean(fitted::FittedLWR, var, uₒ)
-  X, W, A, x, z = matrices(fitted, var, uₒ)
+function predictmean(fitted::FittedLWR, var, gₒ)
+  X, W, A, x, z = matrices(fitted, var, gₒ)
   lwrmean(X, W, A, x, z)
 end
 
-function matrices(fitted::FittedLWR, var, uₒ)
+function matrices(fitted::FittedLWR, var, gₒ)
   d = fitted.state.data
   c = Tables.columns(values(d))
   z = Tables.getcolumn(c, var)
 
-  # adjust CRS of uₒ
-  uₒ′ = uₒ |> Proj(crs(domain(d)))
+  # adjust CRS of gₒ
+  gₒ′ = gₒ |> Proj(crs(domain(d)))
 
   X = fitted.state.X
-  W = wmatrix(fitted, uₒ′)
+  W = wmatrix(fitted, gₒ′)
   A = X' * W * X
 
-  xₒ = CoordRefSystems.raw(coords(centroid(uₒ′)))
+  xₒ = CoordRefSystems.raw(coords(centroid(gₒ′)))
   x = [one(eltype(xₒ)), xₒ...]
 
   X, W, A, x, z
 end
 
-function wmatrix(fitted::FittedLWR, uₒ)
+function wmatrix(fitted::FittedLWR, gₒ)
   w = fitted.model.weightfun
   δ = fitted.model.distance
   d = fitted.state.data
   Ω = domain(d)
   n = nelements(Ω)
 
-  pₒ = centroid(uₒ)
+  pₒ = centroid(gₒ)
   p(i) = centroid(Ω, i)
 
   δs = map(i -> evaluate(δ, pₒ, p(i)), 1:n)

@@ -52,9 +52,9 @@ end
 # PREDICTION STEP
 #-----------------
 
-predict(fitted::FittedIDW, var, uₒ) = idw(fitted, weights(fitted, uₒ), var)
+predict(fitted::FittedIDW, var, gₒ) = idw(fitted, weights(fitted, gₒ), var)
 
-predictprob(fitted::FittedIDW, var, uₒ) = Dirac(predict(fitted, var, uₒ))
+predictprob(fitted::FittedIDW, var, gₒ) = Dirac(predict(fitted, var, gₒ))
 
 function idw(fitted::FittedIDW, weights, var)
   d = fitted.state.data
@@ -72,16 +72,16 @@ function idw(fitted::FittedIDW, weights, var)
   end
 end
 
-function weights(fitted::FittedIDW, uₒ)
+function weights(fitted::FittedIDW, gₒ)
   e = fitted.model.exponent
   δ = fitted.model.distance
   d = fitted.state.data
   Ω = domain(d)
 
-  # adjust CRS of uₒ
-  uₒ′ = uₒ |> Proj(crs(Ω))
+  # adjust CRS of gₒ
+  gₒ′ = gₒ |> Proj(crs(Ω))
 
-  pₒ = centroid(uₒ′)
+  pₒ = centroid(gₒ′)
   p(i) = centroid(Ω, i)
 
   λ(i) = 1 / evaluate(δ, pₒ, p(i)) ^ e

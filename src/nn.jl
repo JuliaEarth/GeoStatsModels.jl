@@ -40,9 +40,9 @@ end
 # PREDICTION STEP
 #-----------------
 
-predict(fitted::FittedNN, var, uₒ) = nn(fitted, distances(fitted, uₒ), var)
+predict(fitted::FittedNN, var, gₒ) = nn(fitted, distances(fitted, gₒ), var)
 
-predictprob(fitted::FittedNN, var, uₒ) = Dirac(predict(fitted, var, uₒ))
+predictprob(fitted::FittedNN, var, gₒ) = Dirac(predict(fitted, var, gₒ))
 
 function nn(fitted::FittedNN, distances, var)
   d = fitted.state.data
@@ -51,15 +51,15 @@ function nn(fitted::FittedNN, distances, var)
   z[argmin(distances)]
 end
 
-function distances(fitted::FittedNN, uₒ)
+function distances(fitted::FittedNN, gₒ)
   δ = fitted.model.distance
   d = fitted.state.data
   Ω = domain(d)
 
-  # adjust CRS of uₒ
-  uₒ′ = uₒ |> Proj(crs(Ω))
+  # adjust CRS of gₒ
+  gₒ′ = gₒ |> Proj(crs(Ω))
 
-  pₒ = centroid(uₒ′)
+  pₒ = centroid(gₒ′)
   p(i) = centroid(Ω, i)
 
   λ(i) = evaluate(δ, pₒ, p(i))

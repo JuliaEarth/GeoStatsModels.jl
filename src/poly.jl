@@ -60,17 +60,17 @@ end
 # PREDICTION STEP
 #-----------------
 
-predict(fitted::FittedPolynomial, var, uₒ) = evalpoly(fitted, var, uₒ)
+predict(fitted::FittedPolynomial, var, gₒ) = evalpoly(fitted, var, gₒ)
 
-predictprob(fitted::FittedPolynomial, var, uₒ) = Dirac(predict(fitted, var, uₒ))
+predictprob(fitted::FittedPolynomial, var, gₒ) = Dirac(predict(fitted, var, gₒ))
 
-function evalpoly(fitted::FittedPolynomial, var, uₒ)
+function evalpoly(fitted::FittedPolynomial, var, gₒ)
   D = domain(fitted.state.data)
   θ = fitted.state.coeffs
   d = fitted.model.degree
-  # adjust CRS of uₒ
-  uₒ′ = uₒ |> Proj(crs(D))
-  xₒ = CoordRefSystems.raw(coords(centroid(uₒ′)))
+  # adjust CRS of gₒ
+  gₒ′ = gₒ |> Proj(crs(D))
+  xₒ = CoordRefSystems.raw(coords(centroid(gₒ′)))
   V = vandermonde((xₒ,), d)
   first(V * θ[var])
 end

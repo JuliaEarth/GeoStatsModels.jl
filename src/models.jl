@@ -19,16 +19,16 @@ Fit `model` to geospatial `data` and return a fitted model.
 function fit end
 
 """
-    predict(model, var, uₒ)
+    predict(model, var, gₒ)
 
-Predict variable `var` at geometry `uₒ` with given `model`.
+Predict variable `var` at geometry `gₒ` with given `model`.
 """
 function predict end
 
 """
-    predictprob(model, var, uₒ)
+    predictprob(model, var, gₒ)
 
-Predict distribution of variable `var` at geometry `uₒ` with given `model`.
+Predict distribution of variable `var` at geometry `gₒ` with given `model`.
 """
 function predictprob end
 
