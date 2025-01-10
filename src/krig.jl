@@ -10,16 +10,16 @@ A Kriging model (e.g. Simple Kriging).
 abstract type KrigingModel <: GeoStatsModel end
 
 """
-    KrigingState(data, LHS, RHS, VARTYPE)
+    KrigingState(data, LHS, RHS, STDSQ)
 
 A Kriging state stores information needed
 to perform estimation at any given geometry.
 """
-mutable struct KrigingState{D<:AbstractGeoTable,F<:Factorization,T,V}
+mutable struct KrigingState{D<:AbstractGeoTable,F<:Factorization,T,S}
   data::D
   LHS::F
   RHS::Vector{T}
-  VARTYPE::V
+  STDSQ::S
 end
 
 """
@@ -61,11 +61,11 @@ function fit(model::KrigingModel, data)
   # factorize LHS
   FLHS = factorize(model, LHS)
 
-  # variance type
-  VARTYPE, _ = GeoStatsFunctions.matrixparams(γ, D)
+  # variance (σ²) type
+  STDSQ, _ = GeoStatsFunctions.matrixparams(γ, D)
 
   # record Kriging state
-  state = KrigingState(data, FLHS, RHS, VARTYPE)
+  state = KrigingState(data, FLHS, RHS, STDSQ)
 
   # return fitted model
   FittedKriging(model, state)
@@ -161,7 +161,7 @@ with Kriging `weights`.
 function predictvar(fitted::FittedKriging, weights::KrigingWeights)
   γ = fitted.model.γ
   b = fitted.state.RHS
-  V = fitted.state.VARTYPE
+  V = fitted.state.STDSQ
   λ = weights.λ
   ν = weights.ν
 
