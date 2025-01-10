@@ -50,8 +50,8 @@ status(fitted::FittedKriging) = issuccess(fitted.state.LHS)
 #--------------
 
 function fit(model::KrigingModel, data)
-  # variogram and domain
-  γ = model.γ
+  # geostatistical function and domain
+  f = model.f
   D = domain(data)
 
   # build Kriging system
@@ -62,7 +62,7 @@ function fit(model::KrigingModel, data)
   FLHS = factorize(model, LHS)
 
   # variance (σ²) type
-  STDSQ, _ = GeoStatsFunctions.matrixparams(γ, D)
+  STDSQ, _ = GeoStatsFunctions.matrixparams(f, D)
 
   # record Kriging state
   state = KrigingState(data, FLHS, RHS, STDSQ)
@@ -77,18 +77,18 @@ end
 Return LHS of Kriging system for the elements in the `domain`.
 """
 function lhs(model::KrigingModel, domain)
-  γ = model.γ
-  V, (_, nobs, nvars) = GeoStatsFunctions.matrixparams(γ, domain)
+  f = model.f
+  V, (_, nobs, nvars) = GeoStatsFunctions.matrixparams(f, domain)
 
   # pre-allocate memory for LHS
   nmat = nobs * nvars
   ncon = nconstraints(model)
   G = Matrix{V}(undef, nmat + ncon, nmat + ncon)
 
-  # set variogram/covariance block
-  GeoStatsFunctions.pairwise!(G, γ, domain)
-  if isstationary(γ)
-    σ² = sill(γ)
+  # set main block with pairwise evaluation
+  GeoStatsFunctions.pairwise!(G, f, domain)
+  if isstationary(f)
+    σ² = sill(f)
     for j in 1:nmat, i in 1:nmat
       @inbounds G[i, j] = σ² - G[i, j]
     end
@@ -159,7 +159,7 @@ Posterior variance of `fitted` Kriging model for variable `var`
 with Kriging `weights`.
 """
 function predictvar(fitted::FittedKriging, weights::KrigingWeights)
-  γ = fitted.model.γ
+  f = fitted.model.f
   b = fitted.state.RHS
   V = fitted.state.STDSQ
   λ = weights.λ
@@ -172,7 +172,7 @@ function predictvar(fitted::FittedKriging, weights::KrigingWeights)
   c₂ = view(b, (n + 1):m) ⋅ ν
   c = c₁ + c₂
 
-  σ² = isstationary(γ) ? sill(γ) - V(c) : V(c)
+  σ² = isstationary(f) ? sill(f) - V(c) : V(c)
 
   max(zero(V), σ²)
 end
@@ -207,16 +207,16 @@ end
 Set RHS of Kriging system at geometry `uₒ`.
 """
 function set_rhs!(fitted::FittedKriging, uₒ)
-  γ = fitted.model.γ
+  f = fitted.model.f
   dom = domain(fitted.state.data)
   nel = nelements(dom)
   RHS = fitted.state.RHS
 
-  # RHS variogram/covariance
-  g = map(u -> γ(u, uₒ), dom)
+  # set RHS with function evaluation
+  g = map(u -> f(u, uₒ), dom)
   RHS[1:nel] .= ustrip.(g)
-  if isstationary(γ)
-    σ² = ustrip(sill(γ))
+  if isstationary(f)
+    σ² = ustrip(sill(f))
     RHS[1:nel] .= σ² .- RHS[1:nel]
   end
 
@@ -240,28 +240,30 @@ include("krig/universal.jl")
 include("krig/externaldrift.jl")
 
 """
-    Kriging(γ)
+    Kriging(f)
 
-Equivalent to [`OrdinaryKriging`](@ref) with variogram `γ`.
+Equivalent to [`OrdinaryKriging`](@ref) with
+geostatistical function `f`.
 
-    Kriging(γ, μ)
+    Kriging(f, μ)
 
-Equivalent to [`SimpleKriging`](@ref) with variogram `γ` and
-constant mean `μ`.
+Equivalent to [`SimpleKriging`](@ref) with
+geostatistical function `f` and constant mean `μ`.
 
-    Kriging(γ, deg, dim)
+    Kriging(f, deg, dim)
 
-Equivalent to [`UniversalKriging`](@ref) with variogram `γ` and
-`deg`-order polynomial in `dim`-dimensinal space.
+Equivalent to [`UniversalKriging`](@ref) with
+geostatistical function `f` and `deg`-order
+polynomial in `dim`-dimensinal space.
 
-    Kriging(γ, drifts)
+    Kriging(f, drifts)
 
-Equivalent to [`ExternalDriftKriging`](@ref) with variogram `γ` and
-`drifts` functions.
+Equivalent to [`ExternalDriftKriging`](@ref) with
+geostatistical `f` and `drifts` functions.
 
 Please check the docstring of corresponding models for more details.
 """
-Kriging(γ) = OrdinaryKriging(γ)
-Kriging(γ, μ::Number) = SimpleKriging(γ, μ)
-Kriging(γ, deg::Int, dim::Int) = UniversalKriging(γ, deg, dim)
-Kriging(γ, drifts::AbstractVector) = ExternalDriftKriging(γ, drifts)
+Kriging(f) = OrdinaryKriging(f)
+Kriging(f, μ::Number) = SimpleKriging(f, μ)
+Kriging(f, deg::Int, dim::Int) = UniversalKriging(f, deg, dim)
+Kriging(f, drifts::AbstractVector) = ExternalDriftKriging(f, drifts)
