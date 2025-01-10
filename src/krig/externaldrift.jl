@@ -3,11 +3,11 @@
 # ------------------------------------------------------------------
 
 """
-    ExternalDriftKriging(γ, drifts)
+    ExternalDriftKriging(f, drifts)
 
-External Drift Kriging with variogram model `γ` and
-external `drifts` functions. A drift function `p -> v`
-maps a point `p` to a value `v`.
+External Drift Kriging with geostatistical function `f` and
+external `drifts` functions. A drift function `p -> v` maps
+a point `p` to a value `v`.
 
 ### Notes
 
@@ -17,8 +17,8 @@ maps a point `p` to a value `v`.
 * [`OrdinaryKriging`](@ref) is recovered for `drifts = [p -> 1]`
 * For polynomial mean, see [`UniversalKriging`](@ref)
 """
-struct ExternalDriftKriging{G<:Variogram,D} <: KrigingModel
-  γ::G
+struct ExternalDriftKriging{F<:GeoStatsFunction,D} <: KrigingModel
+  f::F
   drifts::Vector{D}
 end
 

@@ -3,12 +3,12 @@
 # ------------------------------------------------------------------
 
 """
-    OrdinaryKriging(γ)
+    OrdinaryKriging(f)
 
-Ordinary Kriging with variogram model `γ`.
+Ordinary Kriging with geostatistical function `f`.
 """
-struct OrdinaryKriging{G<:Variogram} <: KrigingModel
-  γ::G
+struct OrdinaryKriging{F<:GeoStatsFunction} <: KrigingModel
+  f::F
 end
 
 nconstraints(::OrdinaryKriging) = 1

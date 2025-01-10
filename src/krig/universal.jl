@@ -3,31 +3,31 @@
 # ------------------------------------------------------------------
 
 """
-    UniversalKriging(γ, degree, dim)
+    UniversalKriging(f, degree, dim)
 
-Universal Kriging with variogram model `γ` and polynomial
-of given `degree` on `dim` coordinates.
+Universal Kriging with geostatistical function `f` and
+polynomial of given `degree` on `dim` coordinates.
 
 ### Notes
 
 * [`OrdinaryKriging`](@ref) is recovered for 0th degree polynomial
 * For non-polynomial mean, see [`ExternalDriftKriging`](@ref)
 """
-struct UniversalKriging{G<:Variogram} <: KrigingModel
-  γ::G
+struct UniversalKriging{F<:GeoStatsFunction} <: KrigingModel
+  f::F
   degree::Int
   dim::Int
   exponents::Matrix{Int}
 
-  function UniversalKriging{G}(γ, degree, dim) where {G<:Variogram}
+  function UniversalKriging{F}(f, degree, dim) where {F<:GeoStatsFunction}
     @assert degree ≥ 0 "degree must be nonnegative"
     @assert dim > 0 "dimension must be positive"
     exponents = UKexps(degree, dim)
-    new(γ, degree, dim, exponents)
+    new(f, degree, dim, exponents)
   end
 end
 
-UniversalKriging(γ, degree, dim) = UniversalKriging{typeof(γ)}(γ, degree, dim)
+UniversalKriging(f, degree, dim) = UniversalKriging{typeof(f)}(f, degree, dim)
 
 function UKexps(degree::Int, dim::Int)
   # multinomial expansion

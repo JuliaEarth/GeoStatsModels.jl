@@ -3,26 +3,26 @@
 # ------------------------------------------------------------------
 
 """
-    SimpleKriging(γ, μ)
+    SimpleKriging(f, μ)
 
-Simple Kriging with variogram model `γ` and constant mean `μ`.
+Simple Kriging with geostatistical function `f` and constant mean `μ`.
 
 ### Notes
 
-* Simple Kriging requires stationary variograms
+* Simple Kriging requires stationary geostatistical function
 """
-struct SimpleKriging{G<:Variogram,V} <: KrigingModel
+struct SimpleKriging{F<:GeoStatsFunction,M} <: KrigingModel
   # input fields
-  γ::G
-  μ::V
+  f::F
+  μ::M
 
-  function SimpleKriging{G,V}(γ, μ) where {G<:Variogram,V}
-    @assert isstationary(γ) "Simple Kriging requires stationary variogram"
-    new(γ, μ)
+  function SimpleKriging{F,M}(f, μ) where {F<:GeoStatsFunction,M}
+    @assert isstationary(f) "Simple Kriging requires stationary geostatistical function"
+    new(f, μ)
   end
 end
 
-SimpleKriging(γ, μ) = SimpleKriging{typeof(γ),typeof(μ)}(γ, μ)
+SimpleKriging(f, μ) = SimpleKriging{typeof(f),typeof(μ)}(f, μ)
 
 nconstraints(::SimpleKriging) = 0
 
