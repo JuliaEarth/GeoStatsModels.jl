@@ -30,12 +30,16 @@ set_constraints_lhs!(::SimpleKriging, LHS::AbstractMatrix, domain) = nothing
 
 set_constraints_rhs!(::FittedKriging{<:SimpleKriging}, gₒ) = nothing
 
-function predictmean(fitted::FittedKriging{<:SimpleKriging}, weights::KrigingWeights, var)
-  μ = fitted.model.μ
+function krigmean(fitted::FittedKriging{<:SimpleKriging}, weights::KrigingWeights, vars)
   d = fitted.state.data
-  c = Tables.columns(values(d))
-  z = Tables.getcolumn(c, var)
+  k = fitted.state.nvar
+  μ = fitted.model.μ
   λ = weights.λ
-  y = [zᵢ - μ for zᵢ in z]
-  μ + sum(λ .* y)
+
+  cols = Tables.columns(values(d))
+  @inbounds ntuple(k) do j
+    λⱼ = @view λ[j:k:end, j]
+    zⱼ = Tables.getcolumn(cols, vars[j])
+    μ[j] + sum(i -> λⱼ[i] * (zⱼ[i] - μ[j]), eachindex(λⱼ, zⱼ))
+  end
 end

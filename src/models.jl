@@ -14,29 +14,32 @@ abstract type GeoStatsModel end
 """
     fit(model, data)
 
-Fit `model` to geospatial `data` and return a fitted model.
+Fit geostatistical `model` to geospatial `data` and return a
+fitted geostatistical model.
 """
 function fit end
 
 """
-    predict(model, var, gₒ)
+    predict(model, vars, gₒ)
 
-Predict variable `var` at geometry `gₒ` with given `model`.
+Predict one or multiple variables `vars` at geometry `gₒ` with
+given geostatistical `model`.
 """
 function predict end
 
 """
-    predictprob(model, var, gₒ)
+    predictprob(model, vars, gₒ)
 
-Predict distribution of variable `var` at geometry `gₒ` with given `model`.
+Predict distribution of one or multiple variables `vars` at
+geometry `gₒ` with given geostatistical `model`.
 """
 function predictprob end
 
 """
     status(fitted)
 
-Return the status of the `fitted` model. (e.g. the
-factorization of the linear system was successful)
+Return the status of the `fitted` geostatistical model.
+(e.g. the factorization of the linear system was successful)
 """
 function status end
 
