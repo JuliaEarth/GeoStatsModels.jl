@@ -124,11 +124,11 @@ factorize(::KrigingModel, LHS) = bunchkaufman(Symmetric(LHS), check=false)
 # PREDICTION STEP
 #-----------------
 
-predict(fitted::FittedKriging, var, gₒ) = predictmean(fitted, weights(fitted, gₒ), var)
+predict(fitted::FittedKriging, vars, gₒ) = predictmean(fitted, weights(fitted, gₒ), vars)
 
-function predictprob(fitted::FittedKriging, var, gₒ)
+function predictprob(fitted::FittedKriging, vars, gₒ)
   w = weights(fitted, gₒ)
-  μ = predictmean(fitted, w, var)
+  μ = predictmean(fitted, w, vars)
   σ² = predictvar(fitted, w)
   Normal(μ, √σ²)
 end
