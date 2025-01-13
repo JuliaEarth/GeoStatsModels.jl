@@ -24,9 +24,9 @@ end
 
 SimpleKriging(f, μ) = SimpleKriging{typeof(f),typeof(μ)}(f, μ)
 
-nconstraints(::SimpleKriging) = 0
+nconstraints(::SimpleKriging, ::Int) = 0
 
-set_constraints_lhs!(::SimpleKriging, LHS::AbstractMatrix, domain) = nothing
+set_constraints_lhs!(::SimpleKriging, LHS::AbstractMatrix, nvar::Int, domain) = nothing
 
 set_constraints_rhs!(::FittedKriging{<:SimpleKriging}, gₒ) = nothing
 

@@ -15,43 +15,43 @@ polynomial of given `degree` on `dim` coordinates.
 """
 struct UniversalKriging{F<:GeoStatsFunction} <: KrigingModel
   f::F
-  degree::Int
+  deg::Int
   dim::Int
-  exponents::Matrix{Int}
+  expmat::Matrix{Int}
 
-  function UniversalKriging{F}(f, degree, dim) where {F<:GeoStatsFunction}
-    @assert degree ≥ 0 "degree must be nonnegative"
+  function UniversalKriging{F}(f, deg, dim) where {F<:GeoStatsFunction}
+    @assert deg ≥ 0 "degree must be nonnegative"
     @assert dim > 0 "dimension must be positive"
-    exponents = UKexps(degree, dim)
-    new(f, degree, dim, exponents)
+    expmat = UKexps(deg, dim)
+    new(f, deg, dim, expmat)
   end
 end
 
-UniversalKriging(f, degree, dim) = UniversalKriging{typeof(f)}(f, degree, dim)
+UniversalKriging(f, deg, dim) = UniversalKriging{typeof(f)}(f, deg, dim)
 
-function UKexps(degree::Int, dim::Int)
+function UKexps(deg::Int, dim::Int)
   # multinomial expansion
-  expmats = [hcat(collect(multiexponents(dim, d))...) for d in 0:degree]
-  exponents = hcat(expmats...)
+  expmats = [hcat(collect(multiexponents(dim, d))...) for d in 0:deg]
+  expmat = hcat(expmats...)
 
   # sort expansion for better conditioned Kriging matrices
-  sorted = sortperm(vec(maximum(exponents, dims=1)), rev=true)
+  sorted = sortperm(vec(maximum(expmat, dims=1)), rev=true)
 
-  exponents[:, sorted]
+  expmat[:, sorted]
 end
 
-nconstraints(model::UniversalKriging) = size(model.exponents, 2)
+nconstraints(model::UniversalKriging, nvar::Int) = size(model.expmat, 2)
 
-function set_constraints_lhs!(model::UniversalKriging, LHS::AbstractMatrix, domain)
-  exponents = model.exponents
+function set_constraints_lhs!(model::UniversalKriging, LHS::AbstractMatrix, nvar::Int, domain)
+  expmat = model.expmat
   nobs = nelements(domain)
-  nterms = size(exponents, 2)
+  nterms = size(expmat, 2)
 
   # set polynomial drift blocks
   for i in 1:nobs
     x = CoordRefSystems.raw(coords(centroid(domain, i)))
     for j in 1:nterms
-      LHS[nobs + j, i] = prod(x .^ exponents[:, j])
+      LHS[nobs + j, i] = prod(x .^ expmat[:, j])
       LHS[i, nobs + j] = LHS[nobs + j, i]
     end
   end
@@ -63,15 +63,15 @@ function set_constraints_lhs!(model::UniversalKriging, LHS::AbstractMatrix, doma
 end
 
 function set_constraints_rhs!(fitted::FittedKriging{<:UniversalKriging}, gₒ)
-  exponents = fitted.model.exponents
   RHS = fitted.state.RHS
+  expmat = fitted.model.expmat
   nobs = nrow(fitted.state.data)
-  nterms = size(exponents, 2)
+  nterms = size(expmat, 2)
 
   # set polynomial drift
   xₒ = CoordRefSystems.raw(coords(centroid(gₒ)))
   for j in 1:nterms
-    RHS[nobs + j] = prod(xₒ .^ exponents[:, j])
+    RHS[nobs + j] = prod(xₒ .^ expmat[:, j])
   end
 
   nothing

@@ -77,7 +77,7 @@ function initkrig(model::KrigingModel, domain)
   # retrieve matrix parameters
   STDSQ, (_, nobs, nvar) = GeoStatsFunctions.matrixparams(fun, dom)
   nfun = nobs * nvar
-  ncon = nconstraints(model)
+  ncon = nconstraints(model, nvar)
   nrow = nfun + ncon
 
   # pre-allocate memory for LHS
@@ -90,7 +90,7 @@ function initkrig(model::KrigingModel, domain)
   LHS = ustrip.(F)
 
   # set blocks of constraints
-  set_constraints_lhs!(model, LHS, dom)
+  set_constraints_lhs!(model, LHS, nvar, dom)
 
   # pre-allocate memory for RHS
   RHS = Matrix{eltype(LHS)}(undef, nrow, nvar)
@@ -99,14 +99,14 @@ function initkrig(model::KrigingModel, domain)
 end
 
 """
-    nconstraints(model)
+    nconstraints(model, nvar)
 
-Return number of constraints for Kriging `model`.
+Number of constraints for Kriging `model` with `nvar` variables.
 """
 function nconstraints end
 
 """
-    set_constraints_lhs!(model, LHS, X)
+    set_constraints_lhs!(model, LHS, nvar, domain)
 
 Set constraints in LHS of Kriging system.
 """

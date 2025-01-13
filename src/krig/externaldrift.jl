@@ -22,9 +22,9 @@ struct ExternalDriftKriging{F<:GeoStatsFunction,D} <: KrigingModel
   drifts::Vector{D}
 end
 
-nconstraints(model::ExternalDriftKriging) = length(model.drifts)
+nconstraints(model::ExternalDriftKriging, nvar::Int) = length(model.drifts)
 
-function set_constraints_lhs!(model::ExternalDriftKriging, LHS::AbstractMatrix, domain)
+function set_constraints_lhs!(model::ExternalDriftKriging, LHS::AbstractMatrix, nvar::Int, domain)
   drifts = model.drifts
   ndrifts = length(drifts)
   nobs = nelements(domain)
