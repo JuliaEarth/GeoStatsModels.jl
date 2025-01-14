@@ -118,7 +118,15 @@ function set_constraints_lhs! end
 Factorize LHS of Kriging system with appropriate
 factorization method.
 """
-factorize(::KrigingModel, LHS) = bunchkaufman(Symmetric(LHS), check=false)
+factorize(model::KrigingModel, LHS) = factorize(model.f, LHS)
+
+# variograms produce dense symmetric matrices
+# and we can enforce Bunch-Kaufman factorization
+factorize(::Variogram, LHS) = bunchkaufman(Symmetric(LHS), check=false)
+
+# find appropriate matrix factorization in case
+# of general geostatistical functions (e.g. transiograms)
+factorize(::GeoStatsFunction, LHS) = LinearAlgebra.factorize(LHS)
 
 #-----------------
 # PREDICTION STEP
