@@ -17,41 +17,41 @@ struct UniversalKriging{F<:GeoStatsFunction} <: KrigingModel
   f::F
   deg::Int
   dim::Int
-  expmat::Matrix{Int}
+  pow::Matrix{Int}
 
   function UniversalKriging{F}(f, deg, dim) where {F<:GeoStatsFunction}
     @assert deg ≥ 0 "degree must be nonnegative"
     @assert dim > 0 "dimension must be positive"
-    expmat = UKexps(deg, dim)
-    new(f, deg, dim, expmat)
+    pow = powermatrix(deg, dim)
+    new(f, deg, dim, pow)
   end
 end
 
 UniversalKriging(f, deg, dim) = UniversalKriging{typeof(f)}(f, deg, dim)
 
-function UKexps(deg::Int, dim::Int)
-  # multinomial expansion
-  expmats = [hcat(collect(multiexponents(dim, d))...) for d in 0:deg]
-  expmat = hcat(expmats...)
+function powermatrix(deg::Int, dim::Int)
+  # multinomial expansion up to given degree
+  pow = reduce(hcat, stack(multiexponents(dim, d)) for d in 0:deg)
 
-  # sort expansion for better conditioned Kriging matrices
-  sorted = sortperm(vec(maximum(expmat, dims=1)), rev=true)
+  # sort for better conditioned Kriging matrices
+  inds = sortperm(vec(maximum(pow, dims=1)), rev=true)
 
-  expmat[:, sorted]
+  pow[:, inds]
 end
 
-nconstraints(model::UniversalKriging, nvar::Int) = size(model.expmat, 2)
+nconstraints(model::UniversalKriging, nvar::Int) = size(model.pow, 2)
 
 function set_constraints_lhs!(model::UniversalKriging, LHS::AbstractMatrix, nvar::Int, domain)
-  expmat = model.expmat
+  pow = model.pow
   nobs = nelements(domain)
-  nterms = size(expmat, 2)
+  nterms = size(pow, 2)
 
   # set polynomial drift blocks
   for i in 1:nobs
-    x = CoordRefSystems.raw(coords(centroid(domain, i)))
+    pᵢ = centroid(domain, i)
+    xᵢ = CoordRefSystems.raw(coords(pᵢ))
     for j in 1:nterms
-      LHS[nobs + j, i] = prod(x .^ expmat[:, j])
+      LHS[nobs + j, i] = prod(xᵢ .^ pow[:, j])
       LHS[i, nobs + j] = LHS[nobs + j, i]
     end
   end
@@ -64,14 +64,15 @@ end
 
 function set_constraints_rhs!(fitted::FittedKriging{<:UniversalKriging}, gₒ)
   RHS = fitted.state.RHS
-  expmat = fitted.model.expmat
+  pow = fitted.model.pow
   nobs = nrow(fitted.state.data)
-  nterms = size(expmat, 2)
+  nterms = size(pow, 2)
 
   # set polynomial drift
-  xₒ = CoordRefSystems.raw(coords(centroid(gₒ)))
+  pₒ = centroid(gₒ)
+  xₒ = CoordRefSystems.raw(coords(pₒ))
   for j in 1:nterms
-    RHS[nobs + j] = prod(xₒ .^ expmat[:, j])
+    RHS[nobs + j] = prod(xₒ .^ pow[:, j])
   end
 
   nothing
