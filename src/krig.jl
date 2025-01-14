@@ -167,9 +167,11 @@ function krigmean(fitted::FittedKriging, weights::KrigingWeights, vars)
 
   cols = Tables.columns(values(d))
   @inbounds ntuple(k) do j
-    λⱼ = @view λ[j:k:end, j]
-    zⱼ = Tables.getcolumn(cols, vars[j])
-    sum(i -> λⱼ[i] * zⱼ[i], eachindex(λⱼ, zⱼ))
+    sum(1:k) do p
+      λₚ = @view λ[p:k:end, j]
+      zₚ = Tables.getcolumn(cols, vars[p])
+      sum(i -> λₚ[i] * zₚ[i], eachindex(λₚ, zₚ))
+    end
   end
 end
 
