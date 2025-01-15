@@ -70,7 +70,7 @@ function set_constraints_rhs!(fitted::FittedKriging{<:ExternalDriftKriging}, g�
   drifts = model.drifts
   ONE = I(nvar)
 
-  # target coordinates
+  # target point
   pₒ = centroid(gₒ)
 
   # set drift blocks
