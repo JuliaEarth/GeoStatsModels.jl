@@ -22,37 +22,61 @@ struct ExternalDriftKriging{F<:GeoStatsFunction,D} <: KrigingModel
   drifts::Vector{D}
 end
 
-nconstraints(model::ExternalDriftKriging, nvar::Int) = length(model.drifts)
+nconstraints(model::ExternalDriftKriging, nvar::Int) = nvar * length(model.drifts)
 
 function set_constraints_lhs!(model::ExternalDriftKriging, LHS::AbstractMatrix, nvar::Int, domain)
-  drifts = model.drifts
-  ndrifts = length(drifts)
-  nobs = nelements(domain)
+  # number of constraints
+  ncon = nconstraints(model, nvar)
 
-  # set external drift blocks
-  for i in 1:nobs
-    p = centroid(domain, i)
-    for j in 1:ndrifts
-      LHS[nobs + j, i] = drifts[j](p)
-      LHS[i, nobs + j] = LHS[nobs + j, i]
+  # index of first constraint
+  ind = size(LHS, 1) - ncon + 1
+
+  # auxiliary variables
+  drifts = model.drifts
+  ONE = I(nvar)
+
+  # set drift blocks
+  for j in 1:nelements(domain)
+    p = centroid(domain, j)
+    for i in eachindex(drifts)
+      F = drifts[i](p) * ONE
+      LHS[(ind + (i - 1) * nvar):(ind + i * nvar - 1), ((j - 1) * nvar + 1):(j * nvar)] .= F
+    end
+  end
+  for j in ind:size(LHS, 2)
+    for i in 1:(ind - 1)
+      LHS[i, j] = LHS[j, i]
     end
   end
 
   # set zero block
-  LHS[(nobs + 1):end, (nobs + 1):end] .= zero(eltype(LHS))
+  LHS[ind:end, ind:end] .= zero(eltype(LHS))
 
   nothing
 end
 
 function set_constraints_rhs!(fitted::FittedKriging{<:ExternalDriftKriging}, gₒ)
-  drifts = fitted.model.drifts
   RHS = fitted.state.RHS
-  nobs = nrow(fitted.state.data)
+  nvar = fitted.state.nvar
+  model = fitted.model
 
-  # set external drift
+  # number of constraints
+  ncon = nconstraints(model, nvar)
+
+  # index of first constraint
+  ind = size(RHS, 1) - ncon + 1
+
+  # auxiliary variables
+  drifts = model.drifts
+  ONE = I(nvar)
+
+  # target coordinates
   pₒ = centroid(gₒ)
-  for (j, m) in enumerate(drifts)
-    RHS[nobs + j] = m(pₒ)
+
+  # set drift blocks
+  for i in eachindex(drifts)
+    F = drifts[i](pₒ) * ONE
+    RHS[(ind + (i - 1) * nvar):(ind + i * nvar - 1), :] .= F
   end
 
   nothing
