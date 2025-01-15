@@ -113,7 +113,7 @@ predict(fitted::FittedKriging, vars, gₒ) = predictmean(fitted, weights(fitted,
 function predictprob(fitted::FittedKriging, vars, gₒ)
   w = weights(fitted, gₒ)
   μ = predictmean(fitted, w, vars)
-  σ² = predictvar(fitted, w)
+  σ² = predictvar(fitted, w, gₒ)
   Normal(μ, √σ²)
 end
 
@@ -138,18 +138,18 @@ function krigmean(fitted::FittedKriging, weights::KrigingWeights, vars)
   end
 end
 
-function predictvar(fitted::FittedKriging, weights::KrigingWeights)
+function predictvar(fitted::FittedKriging, weights::KrigingWeights, gₒ)
   RHS = fitted.state.RHS
   V = fitted.state.STDSQ
 
   # variance formula for given function
-  σ² = krigvar(fitted.model.fun, weights, RHS)
+  σ² = krigvar(fitted.model.fun, weights, RHS, gₒ)
 
   # treat numerical issues
   max(zero(V), V(σ²))
 end
 
-function krigvar(::Variogram, weights::KrigingWeights, RHS)
+function krigvar(::Variogram, weights::KrigingWeights, RHS, gₒ)
   # weights and Lagrange multipliers
   λ = weights.λ
   ν = weights.ν
@@ -158,7 +158,24 @@ function krigvar(::Variogram, weights::KrigingWeights, RHS)
   # compute RHS' * [λ; ν] efficiently
   Σλ = transpose(@view RHS[1:n, :]) * λ
   Σν = transpose(@view RHS[(n + 1):end, :]) * ν
+
   tr(Σλ) + tr(Σν)
+end
+
+function krigvar(cov::Covariance, weights::KrigingWeights, RHS, gₒ)
+  # weights and Lagrange multipliers
+  λ = weights.λ
+  ν = weights.ν
+  n = size(λ, 1)
+
+  # compute RHS' * [λ; ν] efficiently
+  Cλ = transpose(@view RHS[1:n, :]) * λ
+  Cν = transpose(@view RHS[(n + 1):end, :]) * ν
+
+  # compute cov(0) considering change of support
+  Cₒ = cov(gₒ, gₒ)
+
+  tr(Cₒ) - tr(Cλ) - tr(Cν)
 end
 
 function weights(fitted::FittedKriging, gₒ)
