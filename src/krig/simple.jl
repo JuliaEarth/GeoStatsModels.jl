@@ -3,9 +3,9 @@
 # ------------------------------------------------------------------
 
 """
-    SimpleKriging(f, μ)
+    SimpleKriging(fun, mean)
 
-Simple Kriging with geostatistical function `f` and constant mean `μ`.
+Simple Kriging with geostatistical function `fun` and constant `mean`.
 
 ### Notes
 
@@ -13,29 +13,35 @@ Simple Kriging with geostatistical function `f` and constant mean `μ`.
 """
 struct SimpleKriging{F<:GeoStatsFunction,M} <: KrigingModel
   # input fields
-  f::F
-  μ::M
+  fun::F
+  mean::M
 
-  function SimpleKriging{F,M}(f, μ) where {F<:GeoStatsFunction,M}
-    @assert isstationary(f) "Simple Kriging requires stationary geostatistical function"
-    new(f, μ)
+  function SimpleKriging{F,M}(fun, mean) where {F<:GeoStatsFunction,M}
+    @assert isstationary(fun) "Simple Kriging requires stationary geostatistical function"
+    new(fun, mean)
   end
 end
 
-SimpleKriging(f, μ) = SimpleKriging{typeof(f),typeof(μ)}(f, μ)
+SimpleKriging(fun, mean) = SimpleKriging{typeof(fun),typeof(mean)}(fun, mean)
 
-nconstraints(::SimpleKriging) = 0
+nconstraints(::SimpleKriging, ::Int) = 0
 
-set_constraints_lhs!(::SimpleKriging, LHS::AbstractMatrix, domain) = nothing
+set_constraints_lhs!(::SimpleKriging, LHS::AbstractMatrix, nvar::Int, domain) = nothing
 
 set_constraints_rhs!(::FittedKriging{<:SimpleKriging}, gₒ) = nothing
 
-function predictmean(fitted::FittedKriging{<:SimpleKriging}, weights::KrigingWeights, var)
-  μ = fitted.model.μ
+function krigmean(fitted::FittedKriging{<:SimpleKriging}, weights::KrigingWeights, vars)
   d = fitted.state.data
-  c = Tables.columns(values(d))
-  z = Tables.getcolumn(c, var)
+  k = fitted.state.nvar
+  μ = fitted.model.mean
   λ = weights.λ
-  y = [zᵢ - μ for zᵢ in z]
-  μ + sum(λ .* y)
+
+  cols = Tables.columns(values(d))
+  @inbounds ntuple(k) do j
+    sum(1:k) do p
+      λₚ = @view λ[p:k:end, j]
+      zₚ = Tables.getcolumn(cols, vars[p])
+      μ[p] + sum(i -> λₚ[i] * (zₚ[i] - μ[p]), eachindex(λₚ, zₚ))
+    end
+  end
 end

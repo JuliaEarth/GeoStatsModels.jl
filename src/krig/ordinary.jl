@@ -3,26 +3,56 @@
 # ------------------------------------------------------------------
 
 """
-    OrdinaryKriging(f)
+    OrdinaryKriging(fun)
 
-Ordinary Kriging with geostatistical function `f`.
+Ordinary Kriging with geostatistical function `fun`.
 """
 struct OrdinaryKriging{F<:GeoStatsFunction} <: KrigingModel
-  f::F
+  fun::F
 end
 
-nconstraints(::OrdinaryKriging) = 1
+nconstraints(::OrdinaryKriging, nvar::Int) = nvar
 
-function set_constraints_lhs!(::OrdinaryKriging, LHS::AbstractMatrix, domain)
-  T = eltype(LHS)
-  LHS[end, :] .= one(T)
-  LHS[:, end] .= one(T)
-  LHS[end, end] = zero(T)
+function set_constraints_lhs!(model::OrdinaryKriging, LHS::AbstractMatrix, nvar::Int, domain)
+  # number of constraints
+  ncon = nconstraints(model, nvar)
+
+  # index of first constraint
+  ind = size(LHS, 1) - ncon + 1
+
+  # auxiliary variables
+  ONE = I(nvar)
+
+  # set identity blocks
+  for j in 1:nvar:(ind - nvar)
+    LHS[ind:end, j:(j + nvar - 1)] .= ONE
+  end
+  for i in 1:nvar:(ind - nvar)
+    LHS[i:(i + nvar - 1), ind:end] .= ONE
+  end
+
+  # set zero block
+  LHS[ind:end, ind:end] .= zero(eltype(LHS))
+
   nothing
 end
 
 function set_constraints_rhs!(fitted::FittedKriging{<:OrdinaryKriging}, gₒ)
   RHS = fitted.state.RHS
-  RHS[end] = one(eltype(RHS))
+  nvar = fitted.state.nvar
+  model = fitted.model
+
+  # number of constraints
+  ncon = nconstraints(model, nvar)
+
+  # index of first constraint
+  ind = size(RHS, 1) - ncon + 1
+
+  # auxiliary variables
+  ONE = I(nvar)
+
+  # set identity block
+  RHS[ind:end, :] .= ONE
+
   nothing
 end
