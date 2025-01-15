@@ -71,7 +71,7 @@ Initialize the linear system for the Kriging `model` and `domain`.
 """
 function initkrig(model::KrigingModel, domain)
   # geostatistical function and domain
-  fun = model.f
+  fun = model.fun
   dom = domain
 
   # retrieve matrix parameters
@@ -118,7 +118,7 @@ function set_constraints_lhs! end
 Factorize LHS of Kriging system with appropriate
 factorization method.
 """
-factorize(model::KrigingModel, LHS) = factorize(model.f, LHS)
+factorize(model::KrigingModel, LHS) = factorize(model.fun, LHS)
 
 # variograms produce dense symmetric matrices
 # and we can enforce Bunch-Kaufman factorization
@@ -182,7 +182,7 @@ Posterior variance of `fitted` Kriging model with
 given `weights` for variable `var`.
 """
 function predictvar(fitted::FittedKriging, weights::KrigingWeights)
-  f = fitted.model.f
+  f = fitted.model.fun
   b = fitted.state.RHS
   V = fitted.state.STDSQ
   λ = weights.λ
@@ -232,7 +232,7 @@ end
 Set RHS of Kriging system at geometry `gₒ`.
 """
 function set_rhs!(fitted::FittedKriging, gₒ)
-  fun = fitted.model.f
+  fun = fitted.model.fun
   dom = domain(fitted.state.data)
   RHS = fitted.state.RHS
   nobs = fitted.state.nobs

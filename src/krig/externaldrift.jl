@@ -3,9 +3,9 @@
 # ------------------------------------------------------------------
 
 """
-    ExternalDriftKriging(f, drifts)
+    ExternalDriftKriging(fun, drifts)
 
-External Drift Kriging with geostatistical function `f` and
+External Drift Kriging with geostatistical function `fun` and
 external `drifts` functions. A drift function `p -> v` maps
 a point `p` to a value `v`.
 
@@ -18,7 +18,7 @@ a point `p` to a value `v`.
 * For polynomial mean, see [`UniversalKriging`](@ref)
 """
 struct ExternalDriftKriging{F<:GeoStatsFunction,D} <: KrigingModel
-  f::F
+  fun::F
   drifts::Vector{D}
 end
 

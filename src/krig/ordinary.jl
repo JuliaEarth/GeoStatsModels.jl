@@ -3,12 +3,12 @@
 # ------------------------------------------------------------------
 
 """
-    OrdinaryKriging(f)
+    OrdinaryKriging(fun)
 
-Ordinary Kriging with geostatistical function `f`.
+Ordinary Kriging with geostatistical function `fun`.
 """
 struct OrdinaryKriging{F<:GeoStatsFunction} <: KrigingModel
-  f::F
+  fun::F
 end
 
 nconstraints(::OrdinaryKriging, nvar::Int) = nvar

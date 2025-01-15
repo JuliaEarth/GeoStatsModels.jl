@@ -3,9 +3,9 @@
 # ------------------------------------------------------------------
 
 """
-    UniversalKriging(f, degree, dim)
+    UniversalKriging(fun, degree, dim)
 
-Universal Kriging with geostatistical function `f` and
+Universal Kriging with geostatistical function `fun` and
 polynomial of given `degree` on `dim` coordinates.
 
 ### Notes
@@ -14,20 +14,20 @@ polynomial of given `degree` on `dim` coordinates.
 * For non-polynomial mean, see [`ExternalDriftKriging`](@ref)
 """
 struct UniversalKriging{F<:GeoStatsFunction} <: KrigingModel
-  f::F
+  fun::F
   deg::Int
   dim::Int
   pow::Matrix{Int}
 
-  function UniversalKriging{F}(f, deg, dim) where {F<:GeoStatsFunction}
+  function UniversalKriging{F}(fun, deg, dim) where {F<:GeoStatsFunction}
     @assert deg ≥ 0 "degree must be nonnegative"
     @assert dim > 0 "dimension must be positive"
     pow = powermatrix(deg, dim)
-    new(f, deg, dim, pow)
+    new(fun, deg, dim, pow)
   end
 end
 
-UniversalKriging(f, deg, dim) = UniversalKriging{typeof(f)}(f, deg, dim)
+UniversalKriging(fun, deg, dim) = UniversalKriging{typeof(fun)}(fun, deg, dim)
 
 function powermatrix(deg::Int, dim::Int)
   # multinomial expansion up to given degree
