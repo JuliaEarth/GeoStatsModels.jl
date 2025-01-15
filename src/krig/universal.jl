@@ -39,40 +39,63 @@ function powermatrix(deg::Int, dim::Int)
   pow[:, inds]
 end
 
-nconstraints(model::UniversalKriging, nvar::Int) = size(model.pow, 2)
+nconstraints(model::UniversalKriging, nvar::Int) = nvar * size(model.pow, 2)
 
 function set_constraints_lhs!(model::UniversalKriging, LHS::AbstractMatrix, nvar::Int, domain)
+  # number of constraints
+  ncon = nconstraints(model, nvar)
+
+  # index of first constraint
+  ind = size(LHS, 1) - ncon + 1
+
+  # auxiliary variables
   pow = model.pow
-  nobs = nelements(domain)
-  nterms = size(pow, 2)
+  ONE = I(nvar)
 
   # set polynomial drift blocks
-  for i in 1:nobs
-    pᵢ = centroid(domain, i)
-    xᵢ = CoordRefSystems.raw(coords(pᵢ))
-    for j in 1:nterms
-      LHS[nobs + j, i] = prod(xᵢ .^ pow[:, j])
-      LHS[i, nobs + j] = LHS[nobs + j, i]
+  for j in 1:nelements(domain)
+    p = centroid(domain, j)
+    x = CoordRefSystems.raw(coords(p))
+    for i in 1:size(pow, 2)
+      F = prod(x .^ pow[:, i]) * ONE
+      LHS[(ind + (i - 1) * nvar):(ind + i * nvar - 1), ((j - 1) * nvar + 1):(j * nvar)] .= F
+    end
+  end
+  for j in ind:size(LHS, 2)
+    for i in 1:(ind - 1)
+      LHS[i, j] = LHS[j, i]
     end
   end
 
   # set zero block
-  LHS[(nobs + 1):end, (nobs + 1):end] .= zero(eltype(LHS))
+  LHS[ind:end, ind:end] .= zero(eltype(LHS))
 
   nothing
 end
 
 function set_constraints_rhs!(fitted::FittedKriging{<:UniversalKriging}, gₒ)
   RHS = fitted.state.RHS
-  pow = fitted.model.pow
-  nobs = nrow(fitted.state.data)
-  nterms = size(pow, 2)
+  nvar = fitted.state.nvar
+  model = fitted.model
 
-  # set polynomial drift
+  # number of constraints
+  ncon = nconstraints(model, nvar)
+
+  # index of first constraint
+  ind = size(RHS, 1) - ncon + 1
+
+  # auxiliary variables
+  pow = model.pow
+  ONE = I(nvar)
+
+  # target coordinates
   pₒ = centroid(gₒ)
   xₒ = CoordRefSystems.raw(coords(pₒ))
-  for j in 1:nterms
-    RHS[nobs + j] = prod(xₒ .^ pow[:, j])
+
+  # set polynomial drift blocks
+  for i in 1:size(pow, 2)
+    F = prod(xₒ .^ pow[:, i]) * ONE
+    RHS[(ind + (i - 1) * nvar):(ind + i * nvar - 1), :] .= F
   end
 
   nothing
