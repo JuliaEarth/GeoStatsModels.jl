@@ -138,25 +138,27 @@ function krigmean(fitted::FittedKriging, weights::KrigingWeights, vars)
   end
 end
 
-predictvar(fitted::FittedKriging, weights::KrigingWeights) =
-  krigvar(fitted.model.fun, weights, fitted.state)
+function predictvar(fitted::FittedKriging, weights::KrigingWeights)
+  RHS = fitted.state.RHS
+  V = fitted.state.STDSQ
 
-function krigvar(::Variogram, weights::KrigingWeights, state)
-  RHS = state.RHS
-  V = state.STDSQ
-
-  # weights and Lagrange multipliers
-  λ = weights.λ
-  ν = weights.ν
-
-  # compute RHS' * [λ; ν] efficiently
-  n = size(λ, 1)
-  Σλ = transpose(@view RHS[1:n, :]) * λ
-  Σν = transpose(@view RHS[(n + 1):end, :]) * ν
-  σ² = tr(Σλ) + tr(Σν)
+  # variance formula for given function
+  σ² = krigvar(fitted.model.fun, weights, RHS)
 
   # treat numerical issues
   max(zero(V), V(σ²))
+end
+
+function krigvar(::Variogram, weights::KrigingWeights, RHS)
+  # weights and Lagrange multipliers
+  λ = weights.λ
+  ν = weights.ν
+  n = size(λ, 1)
+
+  # compute RHS' * [λ; ν] efficiently
+  Σλ = transpose(@view RHS[1:n, :]) * λ
+  Σν = transpose(@view RHS[(n + 1):end, :]) * ν
+  tr(Σλ) + tr(Σν)
 end
 
 function weights(fitted::FittedKriging, gₒ)
