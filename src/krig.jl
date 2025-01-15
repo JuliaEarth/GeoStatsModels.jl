@@ -64,11 +64,7 @@ function fit(model::KrigingModel, data)
   FittedKriging(model, state)
 end
 
-"""
-    initkrig(model, domain)
-
-Initialize the linear system for the Kriging `model` and `domain`.
-"""
+# initialize Kriging system
 function initkrig(model::KrigingModel, domain)
   # geostatistical function and domain
   fun = model.fun
@@ -98,34 +94,15 @@ function initkrig(model::KrigingModel, domain)
   LHS, RHS, STDSQ, nobs, nvar
 end
 
-"""
-    nconstraints(model, nvar)
-
-Number of constraints for Kriging `model` with `nvar` variables.
-"""
-function nconstraints end
-
-"""
-    set_constraints_lhs!(model, LHS, nvar, domain)
-
-Set constraints in LHS of Kriging system.
-"""
-function set_constraints_lhs! end
-
-"""
-    factorize(model, LHS)
-
-Factorize LHS of Kriging system with appropriate
-factorization method.
-"""
+# factorize LHS of Kriging system with appropriate method
 factorize(model::KrigingModel, LHS) = factorize(model.fun, LHS)
 
-# variograms produce dense symmetric matrices
-# and we can enforce Bunch-Kaufman factorization
+# variograms produce dense symmetric matrices and we
+# can enforce the Bunch-Kaufman factorization method
 factorize(::Variogram, LHS) = bunchkaufman(Symmetric(LHS), check=false)
 
-# find appropriate matrix factorization in case
-# of general geostatistical functions (e.g. transiograms)
+# find appropriate matrix factorization in case of
+# general geostatistical functions (e.g. transiograms)
 factorize(::GeoStatsFunction, LHS) = LinearAlgebra.factorize(LHS)
 
 #-----------------
@@ -141,25 +118,12 @@ function predictprob(fitted::FittedKriging, vars, gₒ)
   Normal(μ, √σ²)
 end
 
-"""
-    predictmean(fitted, weights, vars)
-
-Posterior mean of `fitted` Kriging model with
-given `weights` for variables `vars`.
-"""
 predictmean(fitted::FittedKriging, weights::KrigingWeights, vars) = krigmean(fitted, weights, vars)
 predictmean(fitted::FittedKriging, weights::KrigingWeights, var::Symbol) =
   first(predictmean(fitted, weights, (var,)))
 predictmean(fitted::FittedKriging, weights::KrigingWeights, var::AbstractString) =
   predictmean(fitted, weights, Symbol(var))
 
-"""
-    krigmean(fitted, weights, vars)
-
-Actual implementation of `predictmean` for a
-`fitted` Kriging model with given `weights`
-for multiple variables `vars`.
-"""
 function krigmean(fitted::FittedKriging, weights::KrigingWeights, vars)
   d = fitted.state.data
   k = fitted.state.nvar
@@ -175,21 +139,9 @@ function krigmean(fitted::FittedKriging, weights::KrigingWeights, vars)
   end
 end
 
-"""
-    predictvar(fitted, weights)
-
-Posterior variance of `fitted` Kriging model with
-given `weights` for variable `var`.
-"""
 predictvar(fitted::FittedKriging, weights::KrigingWeights) =
   krigvar(fitted.model.fun, weights, fitted.state)
 
-"""
-    krigvar(fun, weights, state)
-
-Actual implementation of `predictvar` for a geostatistical
-function `fun` with given `weights` and Kriging `state`.
-"""
 function krigvar(::Variogram, weights::KrigingWeights, state)
   RHS = state.RHS
   V = state.STDSQ
@@ -208,12 +160,6 @@ function krigvar(::Variogram, weights::KrigingWeights, state)
   max(zero(V), V(σ²))
 end
 
-"""
-    weights(model, gₒ)
-
-Weights λ (and Lagrange multipliers ν) for the
-Kriging `model` at geometry `gₒ`.
-"""
 function weights(fitted::FittedKriging, gₒ)
   dom = domain(fitted.state.data)
   nobs = fitted.state.nobs
@@ -234,11 +180,6 @@ function weights(fitted::FittedKriging, gₒ)
   KrigingWeights(λ, ν)
 end
 
-"""
-    set_rhs!(model, gₒ)
-
-Set RHS of Kriging system at geometry `gₒ`.
-"""
 function set_rhs!(fitted::FittedKriging, gₒ)
   fun = fitted.model.fun
   dom = domain(fitted.state.data)
@@ -255,11 +196,10 @@ function set_rhs!(fitted::FittedKriging, gₒ)
   set_constraints_rhs!(fitted, gₒ)
 end
 
-"""
-    set_constraints_rhs!(model, xₒ)
-
-Set constraints in RHS of Kriging system.
-"""
+# the following functions are implemented by
+# all variants of Kriging (e.g., SimpleKriging)
+function nconstraints end
+function set_constraints_lhs! end
 function set_constraints_rhs! end
 
 # ----------------
