@@ -26,9 +26,9 @@ SimpleKriging(fun, mean) = SimpleKriging{typeof(fun),typeof(mean)}(fun, mean)
 
 nconstraints(::SimpleKriging, ::Int) = 0
 
-set_constraints_lhs!(::SimpleKriging, LHS::AbstractMatrix, nvar::Int, domain) = nothing
+lhsconstraints!(::SimpleKriging, LHS::AbstractMatrix, nvar::Int, domain) = nothing
 
-set_constraints_rhs!(::FittedKriging{<:SimpleKriging}, gₒ) = nothing
+rhsconstraints!(::FittedKriging{<:SimpleKriging}, gₒ) = nothing
 
 function krigmean(fitted::FittedKriging{<:SimpleKriging}, weights::KrigingWeights, vars)
   d = fitted.state.data

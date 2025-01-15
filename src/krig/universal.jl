@@ -41,7 +41,7 @@ end
 
 nconstraints(model::UniversalKriging, nvar::Int) = nvar * size(model.pow, 2)
 
-function set_constraints_lhs!(model::UniversalKriging, LHS::AbstractMatrix, nvar::Int, domain)
+function lhsconstraints!(model::UniversalKriging, LHS::AbstractMatrix, nvar::Int, domain)
   # number of constraints
   ncon = nconstraints(model, nvar)
 
@@ -73,7 +73,7 @@ function set_constraints_lhs!(model::UniversalKriging, LHS::AbstractMatrix, nvar
   nothing
 end
 
-function set_constraints_rhs!(fitted::FittedKriging{<:UniversalKriging}, gₒ)
+function rhsconstraints!(fitted::FittedKriging{<:UniversalKriging}, gₒ)
   RHS = fitted.state.RHS
   nvar = fitted.state.nvar
   model = fitted.model

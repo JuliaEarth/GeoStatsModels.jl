@@ -13,7 +13,7 @@ end
 
 nconstraints(::OrdinaryKriging, nvar::Int) = nvar
 
-function set_constraints_lhs!(model::OrdinaryKriging, LHS::AbstractMatrix, nvar::Int, domain)
+function lhsconstraints!(model::OrdinaryKriging, LHS::AbstractMatrix, nvar::Int, domain)
   # number of constraints
   ncon = nconstraints(model, nvar)
 
@@ -37,7 +37,7 @@ function set_constraints_lhs!(model::OrdinaryKriging, LHS::AbstractMatrix, nvar:
   nothing
 end
 
-function set_constraints_rhs!(fitted::FittedKriging{<:OrdinaryKriging}, gₒ)
+function rhsconstraints!(fitted::FittedKriging{<:OrdinaryKriging}, gₒ)
   RHS = fitted.state.RHS
   nvar = fitted.state.nvar
   model = fitted.model

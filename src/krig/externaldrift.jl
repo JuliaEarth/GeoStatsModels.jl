@@ -24,7 +24,7 @@ end
 
 nconstraints(model::ExternalDriftKriging, nvar::Int) = nvar * length(model.drifts)
 
-function set_constraints_lhs!(model::ExternalDriftKriging, LHS::AbstractMatrix, nvar::Int, domain)
+function lhsconstraints!(model::ExternalDriftKriging, LHS::AbstractMatrix, nvar::Int, domain)
   # number of constraints
   ncon = nconstraints(model, nvar)
 
@@ -55,7 +55,7 @@ function set_constraints_lhs!(model::ExternalDriftKriging, LHS::AbstractMatrix, 
   nothing
 end
 
-function set_constraints_rhs!(fitted::FittedKriging{<:ExternalDriftKriging}, gₒ)
+function rhsconstraints!(fitted::FittedKriging{<:ExternalDriftKriging}, gₒ)
   RHS = fitted.state.RHS
   nvar = fitted.state.nvar
   model = fitted.model

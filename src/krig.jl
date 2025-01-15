@@ -52,7 +52,7 @@ status(fitted::FittedKriging) = issuccess(fitted.state.LHS)
 #--------------
 
 function fit(model::KrigingModel, data)
-  # build Kriging system
+  # initialize Kriging system
   LHS, RHS, STDSQ, nobs, nvar = initkrig(model, domain(data))
 
   # factorize LHS
@@ -66,9 +66,8 @@ end
 
 # initialize Kriging system
 function initkrig(model::KrigingModel, domain)
-  # geostatistical function and domain
-  fun = model.fun
   dom = domain
+  fun = model.fun
 
   # retrieve matrix parameters
   STDSQ, (_, nobs, nvar) = GeoStatsFunctions.matrixparams(fun, dom)
@@ -86,7 +85,7 @@ function initkrig(model::KrigingModel, domain)
   LHS = ustrip.(F)
 
   # set blocks of constraints
-  set_constraints_lhs!(model, LHS, nvar, dom)
+  lhsconstraints!(model, LHS, nvar, dom)
 
   # pre-allocate memory for RHS
   RHS = Matrix{eltype(LHS)}(undef, nrow, nvar)
@@ -97,12 +96,12 @@ end
 # factorize LHS of Kriging system with appropriate method
 factorize(model::KrigingModel, LHS) = factorize(model.fun, LHS)
 
-# variograms produce dense symmetric matrices and we
-# can enforce the Bunch-Kaufman factorization method
+# enforce Bunch-Kaufman factorization in case of variograms
+# as they produce dense symmetric matrices (including constraints)
 factorize(::Variogram, LHS) = bunchkaufman(Symmetric(LHS), check=false)
 
-# find appropriate matrix factorization in case of
-# general geostatistical functions (e.g. transiograms)
+# find appropriate matrix factorization in case of general
+# geostatistical functions (e.g. covariances, transiograms)
 factorize(::GeoStatsFunction, LHS) = LinearAlgebra.factorize(LHS)
 
 #-----------------
@@ -169,7 +168,7 @@ function weights(fitted::FittedKriging, gₒ)
   # adjust CRS of gₒ
   gₒ′ = gₒ |> Proj(crs(dom))
 
-  set_rhs!(fitted, gₒ′)
+  rhs!(fitted, gₒ′)
 
   # solve Kriging system
   s = fitted.state.LHS \ fitted.state.RHS
@@ -180,9 +179,9 @@ function weights(fitted::FittedKriging, gₒ)
   KrigingWeights(λ, ν)
 end
 
-function set_rhs!(fitted::FittedKriging, gₒ)
-  fun = fitted.model.fun
+function rhs!(fitted::FittedKriging, gₒ)
   dom = domain(fitted.state.data)
+  fun = fitted.model.fun
   RHS = fitted.state.RHS
   nobs = fitted.state.nobs
   nvar = fitted.state.nvar
@@ -193,14 +192,14 @@ function set_rhs!(fitted::FittedKriging, gₒ)
     RHS[(i-1)*nvar+1:i*nvar,1:nvar] .= ustrip.(fun(gᵢ, gₒ))
   end
 
-  set_constraints_rhs!(fitted, gₒ)
+  rhsconstraints!(fitted, gₒ)
 end
 
 # the following functions are implemented by
 # all variants of Kriging (e.g., SimpleKriging)
 function nconstraints end
-function set_constraints_lhs! end
-function set_constraints_rhs! end
+function lhsconstraints! end
+function rhsconstraints! end
 
 # ----------------
 # IMPLEMENTATIONS
