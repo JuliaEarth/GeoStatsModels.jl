@@ -181,23 +181,31 @@ end
 Posterior variance of `fitted` Kriging model with
 given `weights` for variable `var`.
 """
-function predictvar(fitted::FittedKriging, weights::KrigingWeights)
-  f = fitted.model.fun
-  b = fitted.state.RHS
-  V = fitted.state.STDSQ
+predictvar(fitted::FittedKriging, weights::KrigingWeights) =
+  krigvar(fitted.model.fun, weights, fitted.state)
+
+"""
+    krigvar(fun, weights, state)
+
+Actual implementation of `predictvar` for a geostatistical
+function `fun` with given `weights` and Kriging `state`.
+"""
+function krigvar(::Variogram, weights::KrigingWeights, state)
+  RHS = state.RHS
+  V = state.STDSQ
+
+  # weights and Lagrange multipliers
   λ = weights.λ
   ν = weights.ν
 
-  # compute b⋅[λ;ν]
-  n = length(λ)
-  m = length(b)
-  c₁ = view(b, 1:n) ⋅ λ
-  c₂ = view(b, (n + 1):m) ⋅ ν
-  c = c₁ + c₂
+  # compute RHS' * [λ; ν] efficiently
+  n = size(λ, 1)
+  Σλ = transpose(@view RHS[1:n, :]) * λ
+  Σν = transpose(@view RHS[(n + 1):end, :]) * ν
+  σ² = tr(Σλ) + tr(Σν)
 
-  σ² = isstationary(f) ? sill(f) - V(c) : V(c)
-
-  max(zero(V), σ²)
+  # treat numerical issues
+  max(zero(V), V(σ²))
 end
 
 """
