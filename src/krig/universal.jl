@@ -3,43 +3,56 @@
 # ------------------------------------------------------------------
 
 """
-    UniversalKriging(fun, degree, dim)
+    UniversalKriging(fun, drifts)
 
-Universal Kriging with geostatistical function `fun` and
-polynomial of given `degree` on `dim` coordinates.
+Universal Kriging with geostatistical function `fun` and `drifts`.
+A drift is a function `p -> v` maps a point `p` to a unitless value `v`.
+
+    UniversalKriging(fun, deg, dim)
+
+Alternatively, construct monomial `drifts` up to given degree `deg`
+for `dim` geospatial coordinates.
 
 ### Notes
 
-* [`OrdinaryKriging`](@ref) is recovered for 0th degree polynomial
-* For non-polynomial mean, see [`ExternalDriftKriging`](@ref)
+* Drift functions should be smooth for numerical stability
+* Include a constant drift (e.g. `p -> 1`) for unbiased estimation
+* [`OrdinaryKriging`](@ref) is recovered with `drifts = [p -> 1]`
 """
-struct UniversalKriging{F<:GeoStatsFunction} <: KrigingModel
+struct UniversalKriging{F<:GeoStatsFunction,D} <: KrigingModel
   fun::F
-  deg::Int
-  dim::Int
-  pow::Matrix{Int}
+  drifts::D
+end
 
-  function UniversalKriging{F}(fun, deg, dim) where {F<:GeoStatsFunction}
-    @assert deg ≥ 0 "degree must be nonnegative"
-    @assert dim > 0 "dimension must be positive"
-    pow = powermatrix(deg, dim)
-    new(fun, deg, dim, pow)
+UniversalKriging(fun::GeoStatsFunction, deg::Int, dim::Int) =
+  UniversalKriging(fun, monomials(deg, dim))
+
+function monomials(deg::Int, dim::Int)
+  # sanity checks
+  @assert deg ≥ 0 "degree must be nonnegative"
+  @assert dim > 0 "dimension must be positive"
+
+  # helper function to extract raw coordinates
+  x(p) = CoordRefSystems.raw(coords(p))
+
+  # build drift functions for given degree and dimension
+  map(exponents(deg, dim)) do n
+    p -> prod(x(p) .^ n)
   end
 end
 
-UniversalKriging(fun, deg, dim) = UniversalKriging{typeof(fun)}(fun, deg, dim)
-
-function powermatrix(deg::Int, dim::Int)
+function exponents(deg::Int, dim::Int)
   # multinomial expansion up to given degree
   pow = reduce(hcat, stack(multiexponents(dim, d)) for d in 0:deg)
 
   # sort for better conditioned Kriging matrices
   inds = sortperm(vec(maximum(pow, dims=1)), rev=true)
 
-  pow[:, inds]
+  # return iterator of monomial exponents
+  eachcol(pow[:, inds])
 end
 
-nconstraints(model::UniversalKriging, nvar::Int) = nvar * size(model.pow, 2)
+nconstraints(model::UniversalKriging, nvar::Int) = nvar * length(model.drifts)
 
 function lhsconstraints!(model::UniversalKriging, LHS::AbstractMatrix, nvar::Int, domain)
   # number of constraints
@@ -49,15 +62,14 @@ function lhsconstraints!(model::UniversalKriging, LHS::AbstractMatrix, nvar::Int
   ind = size(LHS, 1) - ncon + 1
 
   # auxiliary variables
-  pow = model.pow
+  drifts = model.drifts
   ONE = I(nvar)
 
-  # set polynomial drift blocks
+  # set drift blocks
   @inbounds for j in 1:nelements(domain)
     p = centroid(domain, j)
-    x = CoordRefSystems.raw(coords(p))
-    for i in 1:size(pow, 2)
-      F = prod(x .^ pow[:, i]) * ONE
+    for i in eachindex(drifts)
+      F = drifts[i](p) * ONE
       LHS[(ind + (i - 1) * nvar):(ind + i * nvar - 1), ((j - 1) * nvar + 1):(j * nvar)] .= F
     end
   end
@@ -85,16 +97,15 @@ function rhsconstraints!(fitted::FittedKriging{<:UniversalKriging}, gₒ)
   ind = size(RHS, 1) - ncon + 1
 
   # auxiliary variables
-  pow = model.pow
+  drifts = model.drifts
   ONE = I(nvar)
 
-  # target coordinates
+  # target point
   pₒ = centroid(gₒ)
-  xₒ = CoordRefSystems.raw(coords(pₒ))
 
-  # set polynomial drift blocks
-  @inbounds for i in 1:size(pow, 2)
-    F = prod(xₒ .^ pow[:, i]) * ONE
+  # set drift blocks
+  @inbounds for i in eachindex(drifts)
+    F = drifts[i](pₒ) * ONE
     RHS[(ind + (i - 1) * nvar):(ind + i * nvar - 1), :] .= F
   end
 

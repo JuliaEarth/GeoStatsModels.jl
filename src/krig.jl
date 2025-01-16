@@ -227,33 +227,27 @@ function rhsconstraints! end
 include("krig/simple.jl")
 include("krig/ordinary.jl")
 include("krig/universal.jl")
-include("krig/externaldrift.jl")
 
 """
     Kriging(f)
 
-Equivalent to [`OrdinaryKriging`](@ref) with
-geostatistical function `f`.
+Equivalent to [`OrdinaryKriging`](@ref).
 
     Kriging(f, μ)
 
-Equivalent to [`SimpleKriging`](@ref) with
-geostatistical function `f` and constant mean `μ`.
+Equivalent to [`SimpleKriging`](@ref).
 
     Kriging(f, deg, dim)
 
-Equivalent to [`UniversalKriging`](@ref) with
-geostatistical function `f` and `deg`-order
-polynomial in `dim`-dimensinal space.
+Equivalent to [`UniversalKriging`](@ref).
 
     Kriging(f, drifts)
 
-Equivalent to [`ExternalDriftKriging`](@ref) with
-geostatistical function `f` and `drifts` functions.
+Equivalent to [`UniversalKriging`](@ref).
 
 Please check the docstring of corresponding models for more details.
 """
 Kriging(f::GeoStatsFunction) = OrdinaryKriging(f)
 Kriging(f::GeoStatsFunction, μ::Number) = SimpleKriging(f, μ)
 Kriging(f::GeoStatsFunction, deg::Int, dim::Int) = UniversalKriging(f, deg, dim)
-Kriging(f::GeoStatsFunction, drifts::AbstractVector) = ExternalDriftKriging(f, drifts)
+Kriging(f::GeoStatsFunction, drifts::AbstractVector) = UniversalKriging(f, drifts)

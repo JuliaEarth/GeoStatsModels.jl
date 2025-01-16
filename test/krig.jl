@@ -6,7 +6,7 @@
   SK = GeoStatsModels.SimpleKriging
   OK = GeoStatsModels.OrdinaryKriging
   UK = GeoStatsModels.UniversalKriging
-  DK = GeoStatsModels.ExternalDriftKriging
+  DK = GeoStatsModels.UniversalKriging
 
   @testset "Basics" begin
     dim = 3
