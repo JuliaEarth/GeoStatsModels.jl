@@ -53,7 +53,7 @@ function lhsconstraints!(model::UniversalKriging, LHS::AbstractMatrix, nvar::Int
   ONE = I(nvar)
 
   # set polynomial drift blocks
-  for j in 1:nelements(domain)
+  @inbounds for j in 1:nelements(domain)
     p = centroid(domain, j)
     x = CoordRefSystems.raw(coords(p))
     for i in 1:size(pow, 2)
@@ -61,14 +61,14 @@ function lhsconstraints!(model::UniversalKriging, LHS::AbstractMatrix, nvar::Int
       LHS[(ind + (i - 1) * nvar):(ind + i * nvar - 1), ((j - 1) * nvar + 1):(j * nvar)] .= F
     end
   end
-  for j in ind:size(LHS, 2)
+  @inbounds for j in ind:size(LHS, 2)
     for i in 1:(ind - 1)
       LHS[i, j] = LHS[j, i]
     end
   end
 
   # set zero block
-  LHS[ind:end, ind:end] .= zero(eltype(LHS))
+  @inbounds LHS[ind:end, ind:end] .= zero(eltype(LHS))
 
   nothing
 end
@@ -93,7 +93,7 @@ function rhsconstraints!(fitted::FittedKriging{<:UniversalKriging}, gₒ)
   xₒ = CoordRefSystems.raw(coords(pₒ))
 
   # set polynomial drift blocks
-  for i in 1:size(pow, 2)
+  @inbounds for i in 1:size(pow, 2)
     F = prod(xₒ .^ pow[:, i]) * ONE
     RHS[(ind + (i - 1) * nvar):(ind + i * nvar - 1), :] .= F
   end

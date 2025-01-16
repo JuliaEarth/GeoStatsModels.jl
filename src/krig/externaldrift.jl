@@ -36,21 +36,21 @@ function lhsconstraints!(model::ExternalDriftKriging, LHS::AbstractMatrix, nvar:
   ONE = I(nvar)
 
   # set drift blocks
-  for j in 1:nelements(domain)
+  @inbounds for j in 1:nelements(domain)
     p = centroid(domain, j)
     for i in eachindex(drifts)
       F = drifts[i](p) * ONE
       LHS[(ind + (i - 1) * nvar):(ind + i * nvar - 1), ((j - 1) * nvar + 1):(j * nvar)] .= F
     end
   end
-  for j in ind:size(LHS, 2)
+  @inbounds for j in ind:size(LHS, 2)
     for i in 1:(ind - 1)
       LHS[i, j] = LHS[j, i]
     end
   end
 
   # set zero block
-  LHS[ind:end, ind:end] .= zero(eltype(LHS))
+  @inbounds LHS[ind:end, ind:end] .= zero(eltype(LHS))
 
   nothing
 end
@@ -74,7 +74,7 @@ function rhsconstraints!(fitted::FittedKriging{<:ExternalDriftKriging}, gₒ)
   pₒ = centroid(gₒ)
 
   # set drift blocks
-  for i in eachindex(drifts)
+  @inbounds for i in eachindex(drifts)
     F = drifts[i](pₒ) * ONE
     RHS[(ind + (i - 1) * nvar):(ind + i * nvar - 1), :] .= F
   end
