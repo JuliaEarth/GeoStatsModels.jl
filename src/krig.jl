@@ -192,14 +192,14 @@ function weights(fitted::FittedKriging, gₒ)
   rhsconstraints!(fitted, gₒ′)
 
   # solve Kriging system
-  w = LHS \ RHS
+  W = LHS \ RHS
 
   # index of first constraint
   ind = size(LHS, 1) - ncon + 1
 
   # split weights and Lagrange multipliers
-  λ = @view w[begin:(ind - 1), :]
-  ν = @view w[ind:end, :]
+  λ = @view W[begin:(ind - 1), :]
+  ν = @view W[ind:end, :]
 
   KrigingWeights(λ, ν)
 end
