@@ -21,14 +21,14 @@ function lhsconstraints!(model::OrdinaryKriging, LHS::AbstractMatrix, nvar::Int,
   ind = size(LHS, 1) - ncon + 1
 
   # auxiliary variables
-  ONE = I(nvar)
+  Iₖ = I(nvar)
 
   # set identity blocks
   @inbounds for j in 1:nvar:(ind - nvar)
-    LHS[ind:end, j:(j + nvar - 1)] .= ONE
+    LHS[ind:end, j:(j + nvar - 1)] .= Iₖ
   end
   @inbounds for i in 1:nvar:(ind - nvar)
-    LHS[i:(i + nvar - 1), ind:end] .= ONE
+    LHS[i:(i + nvar - 1), ind:end] .= Iₖ
   end
 
   # set zero block
@@ -49,10 +49,10 @@ function rhsconstraints!(fitted::FittedKriging{<:OrdinaryKriging}, gₒ)
   ind = size(RHS, 1) - ncon + 1
 
   # auxiliary variables
-  ONE = I(nvar)
+  Iₖ = I(nvar)
 
   # set identity block
-  @inbounds RHS[ind:end, :] .= ONE
+  @inbounds RHS[ind:end, :] .= Iₖ
 
   nothing
 end

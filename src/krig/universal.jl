@@ -63,13 +63,13 @@ function lhsconstraints!(model::UniversalKriging, LHS::AbstractMatrix, nvar::Int
 
   # auxiliary variables
   drifts = model.drifts
-  ONE = I(nvar)
+  Iₖ = I(nvar)
 
   # set drift blocks
   @inbounds for j in 1:nelements(domain)
     p = centroid(domain, j)
     for i in eachindex(drifts)
-      F = drifts[i](p) * ONE
+      F = drifts[i](p) * Iₖ
       LHS[(ind + (i - 1) * nvar):(ind + i * nvar - 1), ((j - 1) * nvar + 1):(j * nvar)] .= F
     end
   end
@@ -98,14 +98,14 @@ function rhsconstraints!(fitted::FittedKriging{<:UniversalKriging}, gₒ)
 
   # auxiliary variables
   drifts = model.drifts
-  ONE = I(nvar)
+  Iₖ = I(nvar)
 
   # target point
   pₒ = centroid(gₒ)
 
   # set drift blocks
   @inbounds for i in eachindex(drifts)
-    F = drifts[i](pₒ) * ONE
+    F = drifts[i](pₒ) * Iₖ
     RHS[(ind + (i - 1) * nvar):(ind + i * nvar - 1), :] .= F
   end
 
