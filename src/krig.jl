@@ -10,7 +10,7 @@ A Kriging model (e.g. Simple Kriging, Ordinary Kriging).
 abstract type KrigingModel <: GeoStatsModel end
 
 """
-    KrigingState(data, LHS, RHS, nobs, nvar)
+    KrigingState(data, LHS, RHS, nvar)
 
 A Kriging state stores information needed
 to perform estimation at any given geometry.
@@ -19,7 +19,6 @@ mutable struct KrigingState{D<:AbstractGeoTable,F<:Factorization,A}
   data::D
   LHS::F
   RHS::A
-  nobs::Int
   nvar::Int
 end
 
@@ -52,21 +51,21 @@ status(fitted::FittedKriging) = issuccess(fitted.state.LHS)
 
 function fit(model::KrigingModel, data)
   # initialize Kriging system
-  LHS, RHS, nobs, nvar = initkrig(model, domain(data))
+  LHS, RHS, nvar = initkrig(model, domain(data))
 
   # factorize LHS
   FLHS = factorize(model, LHS)
 
   # record Kriging state
-  state = KrigingState(data, FLHS, RHS, nobs, nvar)
+  state = KrigingState(data, FLHS, RHS, nvar)
 
   FittedKriging(model, state)
 end
 
 # initialize Kriging system
 function initkrig(model::KrigingModel, domain)
-  dom = domain
   fun = model.fun
+  dom = domain
 
   # retrieve matrix parameters
   V, (_, nobs, nvar) = GeoStatsFunctions.matrixparams(fun, dom)
@@ -89,7 +88,7 @@ function initkrig(model::KrigingModel, domain)
   # pre-allocate memory for RHS
   RHS = Matrix{eltype(LHS)}(undef, nrow, nvar)
 
-  LHS, RHS, nobs, nvar
+  LHS, RHS, nvar
 end
 
 # factorize LHS of Kriging system with appropriate method
@@ -179,7 +178,7 @@ end
 
 function weights(fitted::FittedKriging, gₒ)
   dom = domain(fitted.state.data)
-  nobs = fitted.state.nobs
+  nobs = nelements(dom)
   nvar = fitted.state.nvar
   nfun = nobs * nvar
 
@@ -198,10 +197,10 @@ function weights(fitted::FittedKriging, gₒ)
 end
 
 function rhs!(fitted::FittedKriging, gₒ)
-  dom = domain(fitted.state.data)
-  fun = fitted.model.fun
   RHS = fitted.state.RHS
-  nobs = fitted.state.nobs
+  fun = fitted.model.fun
+  dom = domain(fitted.state.data)
+  nobs = nelements(dom)
   nvar = fitted.state.nvar
 
   # set RHS with function evaluation
