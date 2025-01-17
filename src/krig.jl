@@ -20,7 +20,6 @@ mutable struct KrigingState{D<:AbstractGeoTable,F<:Factorization,A}
   LHS::F
   RHS::A
   ncon::Int
-  nvar::Int
 end
 
 """
@@ -52,13 +51,13 @@ status(fitted::FittedKriging) = issuccess(fitted.state.LHS)
 
 function fit(model::KrigingModel, data)
   # initialize Kriging system
-  LHS, RHS, ncon, nvar = initkrig(model, domain(data))
+  LHS, RHS, ncon = initkrig(model, domain(data))
 
   # factorize LHS
   FLHS = factorize(model, LHS)
 
   # record Kriging state
-  state = KrigingState(data, FLHS, RHS, ncon, nvar)
+  state = KrigingState(data, FLHS, RHS, ncon)
 
   FittedKriging(model, state)
 end
@@ -89,7 +88,7 @@ function initkrig(model::KrigingModel, domain)
   # pre-allocate memory for RHS
   RHS = Matrix{eltype(LHS)}(undef, nrow, nvar)
 
-  LHS, RHS, ncon, nvar
+  LHS, RHS, ncon
 end
 
 # factorize LHS of Kriging system with appropriate method
@@ -209,7 +208,7 @@ function rhs!(fitted::FittedKriging, gₒ)
   fun = fitted.model.fun
   dom = domain(fitted.state.data)
   nobs = nelements(dom)
-  nvar = fitted.state.nvar
+  nvar = size(RHS, 2)
 
   # set RHS with function evaluation
   @inbounds for i in 1:nobs
