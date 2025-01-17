@@ -57,31 +57,33 @@ nconstraints(model::UniversalKriging, nvar::Int) = nvar * length(model.drifts)
 function lhsconstraints!(model::UniversalKriging, LHS::AbstractMatrix, nvar::Int, domain)
   drifts = model.drifts
 
+  # retrieve size of LHS
+  nrow, ncol = size(LHS)
+
   # number of constraints
   ncon = nconstraints(model, nvar)
 
   # index of first constraint
-  ind = size(LHS, 1) - ncon + 1
-
-  # auxiliary variables
-  Iₖ = I(nvar)
+  ind = nrow - ncon + 1
 
   # set drift blocks
-  @inbounds for j in 1:nelements(domain)
-    p = centroid(domain, j)
+  @inbounds for e in 1:nelements(domain)
+    p = centroid(domain, e)
     for n in eachindex(drifts)
-      F = drifts[n](p) * Iₖ
-      LHS[(ind + (n - 1) * nvar):(ind + n * nvar - 1), ((j - 1) * nvar + 1):(j * nvar)] .= F
+      f = drifts[n](p)
+      for j in (1 + (e - 1) * nvar):(e * nvar), i in (ind + (n - 1) * nvar):(ind + n * nvar - 1)
+        LHS[i, j] = f * (i == mod1(j, nvar) + ind + (n - 1) * nvar - 1)
+      end
     end
   end
-  @inbounds for j in ind:size(LHS, 2)
-    for i in 1:(ind - 1)
-      LHS[i, j] = LHS[j, i]
-    end
+  @inbounds for j in ind:ncol, i in 1:(ind - 1)
+    LHS[i, j] = LHS[j, i]
   end
 
   # set zero block
-  @inbounds LHS[ind:end, ind:end] .= zero(eltype(LHS))
+  @inbounds for j in ind:ncol, i in ind:nrow
+    LHS[i, j] = 0
+  end
 
   nothing
 end
