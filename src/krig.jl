@@ -69,9 +69,8 @@ function initkrig(model::KrigingModel, domain)
 
   # retrieve matrix parameters
   V, (_, nobs, nvar) = GeoStatsFunctions.matrixparams(fun, dom)
-  nfun = nobs * nvar
   ncon = nconstraints(model, nvar)
-  nrow = nfun + ncon
+  nrow = nobs * nvar + ncon
 
   # pre-allocate memory for LHS
   LHS = Matrix{V}(undef, nrow, nrow)
