@@ -146,32 +146,31 @@ function predictvar(fitted::FittedKriging, weights::KrigingWeights, gₒ)
 end
 
 function krigvar(::Variogram, weights::KrigingWeights, RHS, gₒ)
-  # weights and Lagrange multipliers
-  λ = weights.λ
-  ν = weights.ν
-  n = size(λ, 1)
-
-  # compute RHS' * [λ; ν] efficiently
-  Σλ = transpose(@view RHS[1:n, :]) * λ
-  Σν = transpose(@view RHS[(n + 1):end, :]) * ν
+  # compute variance contributions
+  Σλ, Σν = rhsmul(weights, RHS)
 
   tr(Σλ) + tr(Σν)
 end
 
 function krigvar(cov::Covariance, weights::KrigingWeights, RHS, gₒ)
-  # weights and Lagrange multipliers
-  λ = weights.λ
-  ν = weights.ν
-  n = size(λ, 1)
-
-  # compute RHS' * [λ; ν] efficiently
-  Cλ = transpose(@view RHS[1:n, :]) * λ
-  Cν = transpose(@view RHS[(n + 1):end, :]) * ν
+  # compute variance contributions
+  Cλ, Cν = rhsmul(weights, RHS)
 
   # compute cov(0) considering change of support
   Cₒ = cov(gₒ, gₒ)
 
   tr(Cₒ) - tr(Cλ) - tr(Cν)
+end
+
+# compute RHS' * [λ; ν] efficiently
+function rhsmul(weights::KrigingWeights, RHS)
+  λ = weights.λ
+  ν = weights.ν
+  n = size(λ, 1)
+  Kλ = transpose(@view RHS[1:n, :]) * λ
+  Kν = transpose(@view RHS[(n + 1):end, :]) * ν
+  
+  Kλ, Kν
 end
 
 function weights(fitted::FittedKriging, gₒ)
