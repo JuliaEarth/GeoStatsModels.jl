@@ -39,20 +39,18 @@ end
 
 function rhsconstraints!(fitted::FittedKriging{<:OrdinaryKriging}, gₒ)
   RHS = fitted.state.RHS
-  nvar = fitted.state.nvar
-  model = fitted.model
+  ncon = fitted.state.ncon
 
-  # number of constraints
-  ncon = nconstraints(model, nvar)
+  # retrieve size of RHS
+  nrow, ncol = size(RHS)
 
   # index of first constraint
-  ind = size(RHS, 1) - ncon + 1
-
-  # auxiliary variables
-  Iₖ = I(nvar)
+  ind = nrow - ncon + 1
 
   # set identity block
-  @inbounds RHS[ind:end, :] .= Iₖ
+  @inbounds for j in 1:ncol, i in ind:nrow
+    RHS[i, j] = (i == j + ind - 1)
+  end
 
   nothing
 end

@@ -10,7 +10,7 @@ A Kriging model (e.g. Simple Kriging, Ordinary Kriging).
 abstract type KrigingModel <: GeoStatsModel end
 
 """
-    KrigingState(data, LHS, RHS, nvar)
+    KrigingState(data, LHS, RHS, ncon)
 
 A Kriging state stores information needed
 to perform estimation at any given geometry.
@@ -19,6 +19,7 @@ mutable struct KrigingState{D<:AbstractGeoTable,F<:Factorization,A}
   data::D
   LHS::F
   RHS::A
+  ncon::Int
   nvar::Int
 end
 
@@ -51,13 +52,13 @@ status(fitted::FittedKriging) = issuccess(fitted.state.LHS)
 
 function fit(model::KrigingModel, data)
   # initialize Kriging system
-  LHS, RHS, nvar = initkrig(model, domain(data))
+  LHS, RHS, ncon, nvar = initkrig(model, domain(data))
 
   # factorize LHS
   FLHS = factorize(model, LHS)
 
   # record Kriging state
-  state = KrigingState(data, FLHS, RHS, nvar)
+  state = KrigingState(data, FLHS, RHS, ncon, nvar)
 
   FittedKriging(model, state)
 end
@@ -88,7 +89,7 @@ function initkrig(model::KrigingModel, domain)
   # pre-allocate memory for RHS
   RHS = Matrix{eltype(LHS)}(undef, nrow, nvar)
 
-  LHS, RHS, nvar
+  LHS, RHS, ncon, nvar
 end
 
 # factorize LHS of Kriging system with appropriate method
@@ -123,8 +124,10 @@ predictmean(fitted::FittedKriging, weights::KrigingWeights, var::AbstractString)
 
 function krigmean(fitted::FittedKriging, weights::KrigingWeights, vars)
   d = fitted.state.data
-  k = fitted.state.nvar
   λ = weights.λ
+  k = length(vars)
+
+  @assert size(λ, 2) == k "invalid number of variables for Kriging model"
 
   cols = Tables.columns(values(d))
   @inbounds ntuple(k) do j
@@ -177,21 +180,26 @@ function krigvar(cov::Covariance, weights::KrigingWeights, RHS, gₒ)
 end
 
 function weights(fitted::FittedKriging, gₒ)
+  LHS = fitted.state.LHS
+  RHS = fitted.state.RHS
+  ncon = fitted.state.ncon
   dom = domain(fitted.state.data)
-  nobs = nelements(dom)
-  nvar = fitted.state.nvar
-  nfun = nobs * nvar
+
+  # index of first constraint
+  ind = size(LHS, 1) - ncon + 1
 
   # adjust CRS of gₒ
   gₒ′ = gₒ |> Proj(crs(dom))
 
+  # set RHS of Kriging system
   rhs!(fitted, gₒ′)
 
   # solve Kriging system
-  s = fitted.state.LHS \ fitted.state.RHS
+  w = LHS \ RHS
 
-  λ = @view s[1:nfun, :]
-  ν = @view s[(nfun + 1):end, :]
+  # split weights and Lagrange multipliers
+  λ = @view w[begin:(ind - 1), :]
+  ν = @view w[ind:end, :]
 
   KrigingWeights(λ, ν)
 end

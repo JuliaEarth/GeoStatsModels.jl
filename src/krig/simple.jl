@@ -32,9 +32,11 @@ rhsconstraints!(::FittedKriging{<:SimpleKriging}, gₒ) = nothing
 
 function krigmean(fitted::FittedKriging{<:SimpleKriging}, weights::KrigingWeights, vars)
   d = fitted.state.data
-  k = fitted.state.nvar
   μ = fitted.model.mean
   λ = weights.λ
+  k = length(vars)
+
+  @assert size(λ, 2) == k "invalid number of variables for Kriging model"
 
   cols = Tables.columns(values(d))
   @inbounds ntuple(k) do j

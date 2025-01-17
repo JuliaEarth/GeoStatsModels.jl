@@ -55,6 +55,8 @@ end
 nconstraints(model::UniversalKriging, nvar::Int) = nvar * length(model.drifts)
 
 function lhsconstraints!(model::UniversalKriging, LHS::AbstractMatrix, nvar::Int, domain)
+  drifts = model.drifts
+
   # number of constraints
   ncon = nconstraints(model, nvar)
 
@@ -62,15 +64,14 @@ function lhsconstraints!(model::UniversalKriging, LHS::AbstractMatrix, nvar::Int
   ind = size(LHS, 1) - ncon + 1
 
   # auxiliary variables
-  drifts = model.drifts
   Iₖ = I(nvar)
 
   # set drift blocks
   @inbounds for j in 1:nelements(domain)
     p = centroid(domain, j)
-    for i in eachindex(drifts)
-      F = drifts[i](p) * Iₖ
-      LHS[(ind + (i - 1) * nvar):(ind + i * nvar - 1), ((j - 1) * nvar + 1):(j * nvar)] .= F
+    for n in eachindex(drifts)
+      F = drifts[n](p) * Iₖ
+      LHS[(ind + (n - 1) * nvar):(ind + n * nvar - 1), ((j - 1) * nvar + 1):(j * nvar)] .= F
     end
   end
   @inbounds for j in ind:size(LHS, 2)
@@ -87,26 +88,24 @@ end
 
 function rhsconstraints!(fitted::FittedKriging{<:UniversalKriging}, gₒ)
   RHS = fitted.state.RHS
-  nvar = fitted.state.nvar
-  model = fitted.model
+  ncon = fitted.state.ncon
+  drifts = fitted.model.drifts
 
-  # number of constraints
-  ncon = nconstraints(model, nvar)
+  # retrieve size of RHS
+  nrow, ncol = size(RHS)
 
   # index of first constraint
-  ind = size(RHS, 1) - ncon + 1
-
-  # auxiliary variables
-  drifts = model.drifts
-  Iₖ = I(nvar)
+  ind = nrow - ncon + 1
 
   # target point
   pₒ = centroid(gₒ)
 
   # set drift blocks
-  @inbounds for i in eachindex(drifts)
-    F = drifts[i](pₒ) * Iₖ
-    RHS[(ind + (i - 1) * nvar):(ind + i * nvar - 1), :] .= F
+  @inbounds for n in eachindex(drifts)
+    f = drifts[n](pₒ)
+    for j in 1:ncol, i in (ind + (n - 1) * ncol):(ind + n * ncol - 1)
+      RHS[i, j] = f * (i == j + ind - 1)
+    end
   end
 
   nothing
