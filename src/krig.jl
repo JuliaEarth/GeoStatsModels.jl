@@ -147,9 +147,9 @@ end
 
 function krigvar(::Variogram, weights::KrigingWeights, RHS, gₒ)
   # compute variance contributions
-  Σλ, Σν = weightedrhs(weights, RHS)
+  Γλ, Γν = weightedrhs(weights, RHS)
 
-  diag(Σλ) + diag(Σν)
+  diag(Γλ) + diag(Γν)
 end
 
 function krigvar(cov::Covariance, weights::KrigingWeights, RHS, gₒ)
