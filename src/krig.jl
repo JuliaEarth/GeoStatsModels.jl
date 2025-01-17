@@ -108,7 +108,7 @@ function predictprob(fitted::FittedKriging, vars, gₒ)
   w = weights(fitted, gₒ)
   μ = predictmean(fitted, w, vars)
   σ² = predictvar(fitted, w, gₒ)
-  Normal(μ, √σ² * unit(μ))
+  @. Normal(μ, √σ² * unit(μ))
 end
 
 predictmean(fitted::FittedKriging, weights::KrigingWeights, vars) = krigmean(fitted, weights, vars)
@@ -147,28 +147,29 @@ end
 
 function krigvar(::Variogram, weights::KrigingWeights, RHS, gₒ)
   # compute variance contributions
-  Σλ, Σν = rhsmul(weights, RHS)
+  Σλ, Σν = weightedrhs(weights, RHS)
 
-  tr(Σλ) + tr(Σν)
+  diag(Σλ) + diag(Σν)
 end
 
 function krigvar(cov::Covariance, weights::KrigingWeights, RHS, gₒ)
   # compute variance contributions
-  Cλ, Cν = rhsmul(weights, RHS)
+  Cλ, Cν = weightedrhs(weights, RHS)
 
   # compute cov(0) considering change of support
   Cₒ = cov(gₒ, gₒ)
 
-  tr(Cₒ) - tr(Cλ) - tr(Cν)
+  diag(Cₒ) - diag(Cλ) - diag(Cν)
 end
 
 # compute RHS' * [λ; ν] efficiently
-function rhsmul(weights::KrigingWeights, RHS)
+function weightedrhs(weights::KrigingWeights, RHS)
   λ = weights.λ
   ν = weights.ν
   n = size(λ, 1)
-  Kλ = transpose(@view RHS[1:n, :]) * λ
-  Kν = transpose(@view RHS[(n + 1):end, :]) * ν
+  b = transpose(RHS)
+  Kλ = (@view b[:, 1:n]) * λ
+  Kν = (@view b[:, (n + 1):end]) * ν
   
   Kλ, Kν
 end
