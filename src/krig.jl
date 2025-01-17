@@ -238,5 +238,6 @@ Please check the docstring of corresponding models for more details.
 """
 Kriging(f::GeoStatsFunction) = OrdinaryKriging(f)
 Kriging(f::GeoStatsFunction, μ::Number) = SimpleKriging(f, μ)
+Kriging(f::GeoStatsFunction, μ::AbstractVector{<:Number}) = SimpleKriging(f, μ)
 Kriging(f::GeoStatsFunction, deg::Int, dim::Int) = UniversalKriging(f, deg, dim)
 Kriging(f::GeoStatsFunction, drifts::AbstractVector) = UniversalKriging(f, drifts)
