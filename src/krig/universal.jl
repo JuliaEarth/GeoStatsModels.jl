@@ -104,7 +104,7 @@ function rhsconstraints!(fitted::FittedKriging{<:UniversalKriging}, gₒ)
   @inbounds for n in eachindex(drifts)
     f = drifts[n](pₒ)
     for j in 1:ncol, i in (ind + (n - 1) * ncol):(ind + n * ncol - 1)
-      RHS[i, j] = f * (i == j + ind - 1)
+      RHS[i, j] = f * (i == j + ind + (n - 1) * ncol - 1)
     end
   end
 
