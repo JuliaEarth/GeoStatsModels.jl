@@ -10,16 +10,15 @@ A Kriging model (e.g. Simple Kriging, Ordinary Kriging).
 abstract type KrigingModel <: GeoStatsModel end
 
 """
-    KrigingState(data, LHS, RHS, STDSQ)
+    KrigingState(data, LHS, RHS, nobs, nvar)
 
 A Kriging state stores information needed
 to perform estimation at any given geometry.
 """
-mutable struct KrigingState{D<:AbstractGeoTable,F<:Factorization,A,S}
+mutable struct KrigingState{D<:AbstractGeoTable,F<:Factorization,A}
   data::D
   LHS::F
   RHS::A
-  STDSQ::S
   nobs::Int
   nvar::Int
 end
@@ -53,13 +52,13 @@ status(fitted::FittedKriging) = issuccess(fitted.state.LHS)
 
 function fit(model::KrigingModel, data)
   # initialize Kriging system
-  LHS, RHS, STDSQ, nobs, nvar = initkrig(model, domain(data))
+  LHS, RHS, nobs, nvar = initkrig(model, domain(data))
 
   # factorize LHS
   FLHS = factorize(model, LHS)
 
   # record Kriging state
-  state = KrigingState(data, FLHS, RHS, STDSQ, nobs, nvar)
+  state = KrigingState(data, FLHS, RHS, nobs, nvar)
 
   FittedKriging(model, state)
 end
@@ -70,13 +69,13 @@ function initkrig(model::KrigingModel, domain)
   fun = model.fun
 
   # retrieve matrix parameters
-  STDSQ, (_, nobs, nvar) = GeoStatsFunctions.matrixparams(fun, dom)
+  V, (_, nobs, nvar) = GeoStatsFunctions.matrixparams(fun, dom)
   nfun = nobs * nvar
   ncon = nconstraints(model, nvar)
   nrow = nfun + ncon
 
   # pre-allocate memory for LHS
-  F = Matrix{STDSQ}(undef, nrow, nrow)
+  F = Matrix{V}(undef, nrow, nrow)
 
   # set main block with pairwise evaluation
   GeoStatsFunctions.pairwise!(F, fun, dom)
@@ -90,7 +89,7 @@ function initkrig(model::KrigingModel, domain)
   # pre-allocate memory for RHS
   RHS = Matrix{eltype(LHS)}(undef, nrow, nvar)
 
-  LHS, RHS, STDSQ, nobs, nvar
+  LHS, RHS, nobs, nvar
 end
 
 # factorize LHS of Kriging system with appropriate method
@@ -114,7 +113,7 @@ function predictprob(fitted::FittedKriging, vars, gₒ)
   w = weights(fitted, gₒ)
   μ = predictmean(fitted, w, vars)
   σ² = predictvar(fitted, w, gₒ)
-  Normal(μ, √σ²)
+  Normal(μ, √σ² * unit(μ))
 end
 
 predictmean(fitted::FittedKriging, weights::KrigingWeights, vars) = krigmean(fitted, weights, vars)
@@ -140,13 +139,13 @@ end
 
 function predictvar(fitted::FittedKriging, weights::KrigingWeights, gₒ)
   RHS = fitted.state.RHS
-  V = fitted.state.STDSQ
+  fun = fitted.model.fun
 
   # variance formula for given function
-  σ² = krigvar(fitted.model.fun, weights, RHS, gₒ)
+  σ² = krigvar(fun, weights, RHS, gₒ)
 
   # treat numerical issues
-  max(zero(V), V(σ²))
+  max(zero(σ²), σ²)
 end
 
 function krigvar(::Variogram, weights::KrigingWeights, RHS, gₒ)
