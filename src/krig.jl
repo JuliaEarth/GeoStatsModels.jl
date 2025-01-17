@@ -74,19 +74,16 @@ function initkrig(model::KrigingModel, domain)
   nrow = nfun + ncon
 
   # pre-allocate memory for LHS
-  F = Matrix{V}(undef, nrow, nrow)
+  LHS = Matrix{V}(undef, nrow, nrow)
 
   # set main block with pairwise evaluation
-  GeoStatsFunctions.pairwise!(F, fun, dom)
-
-  # strip units if necessary
-  LHS = ustrip.(F)
+  GeoStatsFunctions.pairwise!(LHS, fun, dom)
 
   # set blocks of constraints
   lhsconstraints!(model, LHS, nvar, dom)
 
   # pre-allocate memory for RHS
-  RHS = Matrix{eltype(LHS)}(undef, nrow, nvar)
+  RHS = similar(LHS, nrow, nvar)
 
   LHS, RHS, ncon
 end
@@ -183,40 +180,28 @@ function weights(fitted::FittedKriging, gₒ)
   RHS = fitted.state.RHS
   ncon = fitted.state.ncon
   dom = domain(fitted.state.data)
-
-  # index of first constraint
-  ind = size(LHS, 1) - ncon + 1
+  fun = fitted.model.fun
 
   # adjust CRS of gₒ
   gₒ′ = gₒ |> Proj(crs(dom))
 
-  # set RHS of Kriging system
-  rhs!(fitted, gₒ′)
+  # set main blocks with pairwise evaluation
+  GeoStatsFunctions.pairwise!(RHS, fun, dom, [gₒ′])
+
+  # set blocks of constraints
+  rhsconstraints!(fitted, gₒ′)
 
   # solve Kriging system
   w = LHS \ RHS
+
+  # index of first constraint
+  ind = size(LHS, 1) - ncon + 1
 
   # split weights and Lagrange multipliers
   λ = @view w[begin:(ind - 1), :]
   ν = @view w[ind:end, :]
 
   KrigingWeights(λ, ν)
-end
-
-function rhs!(fitted::FittedKriging, gₒ)
-  RHS = fitted.state.RHS
-  fun = fitted.model.fun
-  dom = domain(fitted.state.data)
-  nobs = nelements(dom)
-  nvar = size(RHS, 2)
-
-  # set RHS with function evaluation
-  @inbounds for i in 1:nobs
-    gᵢ = dom[i]
-    RHS[(i-1)*nvar+1:i*nvar,1:nvar] .= ustrip.(fun(gᵢ, gₒ))
-  end
-
-  rhsconstraints!(fitted, gₒ)
 end
 
 # the following functions are implemented by
