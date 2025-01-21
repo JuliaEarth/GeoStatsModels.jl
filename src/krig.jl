@@ -142,19 +142,19 @@ function predictvar(fitted::FittedKriging, weights::KrigingWeights, gₒ)
   σ² = krigvar(fun, weights, RHS, gₒ)
 
   # treat numerical issues
-  max(zero(σ²), σ²)
+  max.(zero(σ²), σ²)
 end
 
 function krigvar(::Variogram, weights::KrigingWeights, RHS, gₒ)
   # compute variance contributions
-  Γλ, Γν = weightedrhs(weights, RHS)
+  Γλ, Γν = wmul(weights, RHS)
 
   diag(Γλ) + diag(Γν)
 end
 
 function krigvar(cov::Covariance, weights::KrigingWeights, RHS, gₒ)
   # compute variance contributions
-  Cλ, Cν = weightedrhs(weights, RHS)
+  Cλ, Cν = wmul(weights, RHS)
 
   # compute cov(0) considering change of support
   Cₒ = cov(gₒ, gₒ)
@@ -162,8 +162,30 @@ function krigvar(cov::Covariance, weights::KrigingWeights, RHS, gₒ)
   diag(Cₒ) - diag(Cλ) - diag(Cν)
 end
 
+function krigvar(t::Transiogram, weights::KrigingWeights, RHS, gₒ)
+  # auxiliary variables
+  n, k = size(weights.λ)
+  p = proportions(t)
+
+  # convert transiograms to covariances
+  COV = deepcopy(RHS)
+  @inbounds for j in 1:k, i in 1:n
+    # Eq. 12 of Carle & Fogg 1996
+    COV[i,j] = p[mod1(i, k)] * (COV[i,j] - p[j])
+  end
+
+  # compute variance contributions
+  Cλ, Cν = wmul(weights, COV)
+
+  # compute cov(0) considering change of support
+  Tₒ = t(gₒ, gₒ)
+  Cₒ = @inbounds [p[i] * (Tₒ[i, j] - p[j]) for i in 1:k, j in 1:k]
+
+  diag(Cₒ) - diag(Cλ) - diag(Cν)
+end
+
 # compute RHS' * [λ; ν] efficiently
-function weightedrhs(weights::KrigingWeights, RHS)
+function wmul(weights::KrigingWeights, RHS)
   λ = weights.λ
   ν = weights.ν
   n = size(λ, 1)
