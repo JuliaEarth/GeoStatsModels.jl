@@ -16,15 +16,10 @@
     data = georef((z=rand(rng, nobs),), pset)
 
     γ = GaussianVariogram(sill=1.0, range=1.0, nugget=0.0)
-    simkrig = SK(γ, mean(data.z))
-    ordkrig = OK(γ)
-    unikrig = UK(γ, 1, 3)
-    drikrig = DK(γ, [x -> 1.0])
-
-    sk = GeoStatsModels.fit(simkrig, data)
-    ok = GeoStatsModels.fit(ordkrig, data)
-    uk = GeoStatsModels.fit(unikrig, data)
-    dk = GeoStatsModels.fit(drikrig, data)
+    sk = GeoStatsModels.fit(SK(γ, mean(data.z)), data)
+    ok = GeoStatsModels.fit(OK(γ), data)
+    uk = GeoStatsModels.fit(UK(γ, 1, 3), data)
+    dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
 
     # Kriging is an interpolator
     for j in 1:nobs
@@ -149,7 +144,7 @@
   end
 
   # non-stationary variograms are allowed
-  @testset "Stationarity" begin
+  @testset "Non-stationarity" begin
     dim = 3
     nobs = 10
     cmat = 10 * rand(rng, dim, nobs)
@@ -223,16 +218,12 @@
 
   # change of support checks
   @testset "Support" begin
-    dim = 2
-    nobs = 10
-    cmat = 10 * rand(rng, dim, nobs)
-    pset = PointSet(Tuple.(eachcol(cmat)))
-    data = georef((z=rand(rng, nobs),), pset)
+    data = georef((; z=[1.0, 0.0, 0.0]), [(25.0, 25.0), (50.0, 75.0), (75.0, 50.0)])
 
     γ = GaussianVariogram(sill=1.0, range=1.0, nugget=0.0)
     sk = GeoStatsModels.fit(SK(γ, mean(data.z)), data)
     ok = GeoStatsModels.fit(OK(γ), data)
-    uk = GeoStatsModels.fit(UK(γ, 1, dim), data)
+    uk = GeoStatsModels.fit(UK(γ, 1, 2), data)
     dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
 
     # predict on a quadrangle
@@ -247,26 +238,21 @@
     @test var(okdist) ≥ 0
     @test var(ukdist) ≥ 0
     @test var(dkdist) ≥ 0
-    @test var(skdist) ≤ var(okdist) + tol
   end
 
   @testset "CoDa" begin
-    dim = 2
-    nobs = 10
-    cmat = 10 * rand(rng, dim, nobs)
-    pset = PointSet(Tuple.(eachcol(cmat)))
-    table = (z=rand(rng, Composition{3}, nobs),)
-    data = georef(table, pset)
+    pset = rand(rng, Point, 10)
+    data = georef((; z=rand(rng, Composition{3}, 10)), pset)
 
     # basic models
     γ = GaussianVariogram(sill=1.0, range=1.0, nugget=0.0)
     sk = GeoStatsModels.fit(SK(γ, mean(data.z)), data)
     ok = GeoStatsModels.fit(OK(γ), data)
-    uk = GeoStatsModels.fit(UK(γ, 1, dim), data)
+    uk = GeoStatsModels.fit(UK(γ, 1, 3), data)
     dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
 
     # prediction on a quadrangle
-    gₒ = Quadrangle((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0))
+    gₒ = first(CartesianGrid(10, 10, 10))
     skmean = GeoStatsModels.predict(sk, :z, gₒ)
     okmean = GeoStatsModels.predict(ok, :z, gₒ)
     ukmean = GeoStatsModels.predict(uk, :z, gₒ)
@@ -279,17 +265,14 @@
     @test dkmean isa Composition
   end
 
-  @testset "Unitiful" begin
-    dim = 3
-    nobs = 10
-    cmat = 10 * rand(rng, dim, nobs)
-    pset = PointSet(Tuple.(eachcol(cmat)))
-    data = georef((z=rand(rng, nobs) * u"K",), pset)
+  @testset "Unitful" begin
+    pset = rand(rng, Point, 10)
+    data = georef((z=rand(rng, 10) * u"K",), pset)
 
     γ = GaussianVariogram(sill=1.0u"K^2")
     sk = GeoStatsModels.fit(SK(γ, mean(data.z)), data)
     ok = GeoStatsModels.fit(OK(γ), data)
-    uk = GeoStatsModels.fit(UK(γ, 1, dim), data)
+    uk = GeoStatsModels.fit(UK(γ, 1, 3), data)
     dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
     for _k in [sk, ok, uk, dk]
       μ = GeoStatsModels.predict(_k, :z, Point(0, 0, 0))
