@@ -108,7 +108,8 @@ function predictprob(fitted::FittedKriging, vars, gₒ)
   w = weights(fitted, gₒ)
   μ = predictmean(fitted, w, vars)
   σ² = predictvar(fitted, w, gₒ)
-  @. Normal(μ, √σ² * unit(μ))
+  # https://github.com/JuliaStats/Distributions.jl/issues/1413
+  @. Normal(ustrip(μ), √σ²)
 end
 
 predictmean(fitted::FittedKriging, weights::KrigingWeights, vars) = krigmean(fitted, weights, vars)
