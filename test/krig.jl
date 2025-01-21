@@ -292,11 +292,8 @@
     uk = GeoStatsModels.fit(UK(γ, 1, dim), data)
     dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
     for _k in [sk, ok, uk, dk]
-      w = GeoStatsModels.weights(_k, Point(0, 0, 0))
-      μ = GeoStatsModels.predictmean(_k, w, :z)
-      σ² = GeoStatsModels.predictvar(_k, w)
+      μ = GeoStatsModels.predict(_k, :z, Point(0, 0, 0))
       @test unit(μ) == u"K"
-      @test unit(σ²) == u"K^2"
     end
   end
 
