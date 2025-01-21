@@ -142,7 +142,10 @@ function predictvar(fitted::FittedKriging, weights::KrigingWeights, gₒ)
   σ² = krigvar(fun, weights, RHS, gₒ)
 
   # treat numerical issues
-  max.(zero(σ²), σ²)
+  σ²₊ = max.(zero(σ²), σ²)
+
+  # treat scalar case
+  length(σ²₊) == 1 ? first(σ²₊) : σ²₊
 end
 
 function krigvar(::Variogram, weights::KrigingWeights, RHS, gₒ)
