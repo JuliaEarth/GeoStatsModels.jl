@@ -275,6 +275,40 @@
     @test dkmean isa Composition
   end
 
+  @testset "Covariance" begin
+    pset = rand(rng, Point, 100) |> Scale(10)
+    data = georef((; z=rand(rng, 100)), pset)
+
+    # variogram-based estimators
+    γ = GaussianVariogram(sill=1.0, range=1.0, nugget=0.0)
+    ok_γ = GeoStatsModels.fit(OK(γ), data)
+    uk_γ = GeoStatsModels.fit(UK(γ, 1, 3), data)
+    dk_γ = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
+
+    # covariance-based estimators
+    c = GaussianCovariance(sill=1.0, range=1.0, nugget=0.0)
+    ok_c = GeoStatsModels.fit(OK(c), data)
+    uk_c = GeoStatsModels.fit(UK(c, 1, 3), data)
+    dk_c = GeoStatsModels.fit(DK(c, [x -> 1.0]), data)
+
+    # predict on a specific point
+    pₒ = Point(5.0, 5.0, 5.0)
+    okdist_γ = GeoStatsModels.predictprob(ok_γ, :z, pₒ)
+    ukdist_γ = GeoStatsModels.predictprob(uk_γ, :z, pₒ)
+    dkdist_γ = GeoStatsModels.predictprob(dk_γ, :z, pₒ)
+    okdist_c = GeoStatsModels.predictprob(ok_c, :z, pₒ)
+    ukdist_c = GeoStatsModels.predictprob(uk_c, :z, pₒ)
+    dkdist_c = GeoStatsModels.predictprob(dk_c, :z, pₒ)
+
+    # distributions match no matter the geostats function
+    @test mean(okdist_γ) ≈ mean(okdist_c)
+    @test mean(ukdist_γ) ≈ mean(ukdist_c)
+    @test mean(dkdist_γ) ≈ mean(dkdist_c)
+    @test var(okdist_γ) ≈ var(okdist_c)
+    @test var(ukdist_γ) ≈ var(ukdist_c)
+    @test var(dkdist_γ) ≈ var(dkdist_c)
+  end
+
   @testset begin "Kriging"
     γ = GaussianVariogram()
     @test Kriging(γ) isa OK
