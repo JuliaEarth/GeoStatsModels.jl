@@ -15,7 +15,7 @@ abstract type KrigingModel <: GeoStatsModel end
 A Kriging state stores information needed
 to perform estimation at any given geometry.
 """
-mutable struct KrigingState{D<:AbstractGeoTable,F<:Factorization,A}
+mutable struct KrigingState{D<:AbstractGeoTable,F,A}
   data::D
   LHS::F
   RHS::A
