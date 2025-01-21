@@ -157,11 +157,14 @@ function krigvar(::Variogram, weights::KrigingWeights, RHS, gₒ)
 end
 
 function krigvar(cov::Covariance, weights::KrigingWeights, RHS, gₒ)
+  # auxiliary variables
+  k = size(weights.λ, 2)
+
   # compute variance contributions
   Cλ, Cν = wmul(weights, RHS)
 
   # compute cov(0) considering change of support
-  Cₒ = cov(gₒ, gₒ)
+  Cₒ = cov(gₒ, gₒ) * I(k)
 
   diag(Cₒ) - diag(Cλ) - diag(Cν)
 end
