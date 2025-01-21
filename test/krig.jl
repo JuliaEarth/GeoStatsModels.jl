@@ -9,11 +9,9 @@
   DK = GeoStatsModels.UniversalKriging
 
   @testset "Basics" begin
-    dim = 3
     nobs = 10
-    cmat = 10 * rand(rng, dim, nobs)
-    pset = PointSet(Tuple.(eachcol(cmat)))
-    data = georef((z=rand(rng, nobs),), pset)
+    pset = rand(rng, Point, nobs) |> Scale(10)
+    data = georef((; z=rand(rng, nobs)), pset)
 
     γ = GaussianVariogram(sill=1.0, range=1.0, nugget=0.0)
     sk = GeoStatsModels.fit(SK(γ, mean(data.z)), data)
@@ -51,8 +49,8 @@
 
     # Kriging is translation-invariant
     h = to(rand(rng, Point))
-    pset_h = PointSet([pset[i] + h for i in 1:nelements(pset)])
-    data_h = georef((z=data.z,), pset_h)
+    pset_h = pset .+ Ref(h)
+    data_h = georef((; z=data.z), pset_h)
     sk_h = GeoStatsModels.fit(SK(γ, mean(data_h.z)), data_h)
     ok_h = GeoStatsModels.fit(OK(γ), data_h)
     uk_h = GeoStatsModels.fit(UK(γ, 1, 3), data_h)
@@ -93,7 +91,7 @@
 
     # Kriging variance is a function of data configuration, not data values
     δ = rand(rng, nobs)
-    data_δ = georef((z=data.z .+ δ,), pset)
+    data_δ = georef((; z=data.z .+ δ), pset)
     sk_δ = GeoStatsModels.fit(SK(γ, mean(data_δ.z)), data_δ)
     ok_δ = GeoStatsModels.fit(OK(γ), data_δ)
     uk_δ = GeoStatsModels.fit(UK(γ, 1, 3), data_δ)
@@ -145,11 +143,9 @@
 
   # non-stationary variograms are allowed
   @testset "Non-stationarity" begin
-    dim = 3
     nobs = 10
-    cmat = 10 * rand(rng, dim, nobs)
-    pset = PointSet(Tuple.(eachcol(cmat)))
-    data = georef((z=rand(rng, nobs),), pset)
+    pset = rand(rng, Point, nobs) |> Scale(10)
+    data = georef((; z=rand(rng, nobs)), pset)
 
     γ_ns = PowerVariogram()
     ok_ns = GeoStatsModels.fit(OK(γ_ns), data)
