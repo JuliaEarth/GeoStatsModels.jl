@@ -309,11 +309,11 @@
     @test var(dkdist_γ) ≈ var(dkdist_c)
   end
 
-  @testset begin "CoKriging"
+  @testset "CoKriging" begin
     pset = [Point(25.0, 25.0), Point(50.0, 75.0), Point(75.0, 50.0)]
     data = georef((; a=[1.0, 0.0, 0.0], b=[0.0, 1.0, 0.0], c=[0.0, 0.0, 1.0]), pset)
 
-    γ = [1.0 0.3 0.1; 0.3 1.0 0.2; 0.1 0.2 1.0] * SphericalVariogram(range=35.)
+    γ = [1.0 0.3 0.1; 0.3 1.0 0.2; 0.1 0.2 1.0] * SphericalVariogram(range=35.0)
     sk = GeoStatsModels.fit(SK(γ, [0.0, 0.0, 0.0]), data)
     ok = GeoStatsModels.fit(OK(γ), data)
     uk = GeoStatsModels.fit(UK(γ, 1, 2), data)
@@ -336,7 +336,7 @@
     end
 
     # predict on a specific point
-    pₒ = centroid(Segment(pset[1], pset[2]))
+    pₒ = Point(50.0, 50.0)
     skdist = GeoStatsModels.predictprob(sk, (:a, :b, :c), pₒ)
     okdist = GeoStatsModels.predictprob(ok, (:a, :b, :c), pₒ)
     ukdist = GeoStatsModels.predictprob(uk, (:a, :b, :c), pₒ)
@@ -351,7 +351,45 @@
     @test all(≥(0), var.(dkdist))
   end
 
-  @testset begin "Generic"
+  @testset "Transiogram" begin
+    pset = [Point(25.0, 25.0), Point(50.0, 75.0), Point(75.0, 50.0)]
+    data = georef((; a=[1.0, 0.0, 0.0], b=[0.0, 1.0, 0.0], c=[0.0, 0.0, 1.0]), pset)
+
+    t = MatrixExponentialTransiogram((35.0, 35.0, 35.0), (0.5, 0.3, 0.2))
+    sk = GeoStatsModels.fit(SK(t, [0.0, 0.0, 0.0]), data)
+    ok = GeoStatsModels.fit(OK(t), data)
+    uk = GeoStatsModels.fit(UK(t, 1, 2), data)
+    dk = GeoStatsModels.fit(DK(t, [x -> 1.0]), data)
+
+    # interpolation property
+    for i in 1:3
+      skdist = GeoStatsModels.predictprob(sk, (:a, :b, :c), pset[i])
+      okdist = GeoStatsModels.predictprob(ok, (:a, :b, :c), pset[i])
+      ukdist = GeoStatsModels.predictprob(uk, (:a, :b, :c), pset[i])
+      dkdist = GeoStatsModels.predictprob(dk, (:a, :b, :c), pset[i])
+      @test mean.(skdist) ≈ [j == i for j in 1:3]
+      @test mean.(okdist) ≈ [j == i for j in 1:3]
+      @test mean.(ukdist) ≈ [j == i for j in 1:3]
+      @test mean.(dkdist) ≈ [j == i for j in 1:3]
+    end
+
+    # predict on a specific point
+    pₒ = Point(50.0, 50.0)
+    skdist = GeoStatsModels.predictprob(sk, (:a, :b, :c), pₒ)
+    okdist = GeoStatsModels.predictprob(ok, (:a, :b, :c), pₒ)
+    ukdist = GeoStatsModels.predictprob(uk, (:a, :b, :c), pₒ)
+    dkdist = GeoStatsModels.predictprob(dk, (:a, :b, :c), pₒ)
+    @test all(μ -> 0 ≤ μ ≤ 1, mean.(skdist))
+    @test all(μ -> 0 ≤ μ ≤ 1, mean.(okdist))
+    @test all(μ -> 0 ≤ μ ≤ 1, mean.(ukdist))
+    @test all(μ -> 0 ≤ μ ≤ 1, mean.(dkdist))
+    @test all(≥(0), var.(skdist))
+    @test all(≥(0), var.(okdist))
+    @test all(≥(0), var.(ukdist))
+    @test all(≥(0), var.(dkdist))
+  end
+
+  @testset "Generic" begin
     γ = GaussianVariogram()
     @test Kriging(γ) isa OK
     @test Kriging(γ, 0.0) isa SK
