@@ -24,8 +24,7 @@ struct UniversalKriging{F<:GeoStatsFunction,D} <: KrigingModel
   drifts::D
 end
 
-UniversalKriging(fun::GeoStatsFunction, deg::Int, dim::Int) =
-  UniversalKriging(fun, monomials(deg, dim))
+UniversalKriging(fun::GeoStatsFunction, deg::Int, dim::Int) = UniversalKriging(fun, monomials(deg, dim))
 
 function monomials(deg::Int, dim::Int)
   # sanity checks

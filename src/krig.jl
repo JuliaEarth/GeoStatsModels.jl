@@ -113,8 +113,7 @@ function predictprob(fitted::FittedKriging, vars, gₒ)
 end
 
 predictmean(fitted::FittedKriging, weights::KrigingWeights, vars) = krigmean(fitted, weights, vars)
-predictmean(fitted::FittedKriging, weights::KrigingWeights, var::Symbol) =
-  first(predictmean(fitted, weights, (var,)))
+predictmean(fitted::FittedKriging, weights::KrigingWeights, var::Symbol) = first(predictmean(fitted, weights, (var,)))
 predictmean(fitted::FittedKriging, weights::KrigingWeights, var::AbstractString) =
   predictmean(fitted, weights, Symbol(var))
 
@@ -178,7 +177,7 @@ function krigvar(t::Transiogram, weights::KrigingWeights, RHS, gₒ)
   COV = deepcopy(RHS)
   @inbounds for j in 1:k, i in 1:n
     # Eq. 12 of Carle & Fogg 1996
-    COV[i,j] = p[mod1(i, k)] * (COV[i,j] - p[j])
+    COV[i, j] = p[mod1(i, k)] * (COV[i, j] - p[j])
   end
 
   # compute variance contributions
@@ -199,7 +198,7 @@ function wmul(weights::KrigingWeights, RHS)
   b = transpose(RHS)
   Kλ = (@view b[:, 1:n]) * λ
   Kν = (@view b[:, (n + 1):end]) * ν
-  
+
   Kλ, Kν
 end
 
