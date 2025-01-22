@@ -126,7 +126,7 @@ function krigmean(fitted::FittedKriging, weights::KrigingWeights, vars)
   @assert size(λ, 2) == k "invalid number of variables for Kriging model"
 
   cols = Tables.columns(values(d))
-  @inbounds ntuple(k) do j
+  @inbounds map(1:k) do j
     sum(1:k) do p
       λₚ = @view λ[p:k:end, j]
       zₚ = Tables.getcolumn(cols, vars[p])
