@@ -6,8 +6,7 @@
     GeoStatsModel
 
 A geostatistical model that predicts variables over geometries
-of a geospatial domain that are in between other geometries with
-samples.
+of a geospatial domain near other geometries with samples.
 """
 abstract type GeoStatsModel end
 
@@ -20,12 +19,21 @@ fitted geostatistical model.
 function fit end
 
 """
+    FittedGeoStatsModel
+
+A fitted geostatistical model obtained with the [`fit`](@ref) function
+on a [`GeoStatsModel`](@ref).
+"""
+abstract type FittedGeoStatsModel end
+
+"""
     predict(model, vars, gₒ)
 
 Predict one or multiple variables `vars` at geometry `gₒ` with
 given geostatistical `model`.
 """
-function predict end
+predict(model::FittedGeoStatsModel, var::AbstractString, gₒ) = predict(model, Symbol(var), gₒ)
+predict(model::FittedGeoStatsModel, vars, gₒ) = [predict(model, var, gₒ) for var in vars]
 
 """
     predictprob(model, vars, gₒ)
@@ -33,7 +41,8 @@ function predict end
 Predict distribution of one or multiple variables `vars` at
 geometry `gₒ` with given geostatistical `model`.
 """
-function predictprob end
+predictprob(model::FittedGeoStatsModel, var::AbstractString, gₒ) = predictprob(model, Symbol(var), gₒ)
+predictprob(model::FittedGeoStatsModel, vars, gₒ) = [predictprob(model, var, gₒ) for var in vars]
 
 """
     status(fitted)

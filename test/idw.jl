@@ -28,4 +28,14 @@
     pred = GeoStatsModels.predict(idw, :z, Point(0.0))
     @test pred isa Composition
   end
+
+  @testset "Single/Multiple" begin
+    d = georef((; z=[1.0, 0.0, 1.0]), [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)])
+    idw = GeoStatsModels.fit(IDW(), d)
+    pred1 = GeoStatsModels.predict(idw, :z, Point(0.0, 0.0))
+    pred2 = GeoStatsModels.predict(idw, "z", Point(0.0, 0.0))
+    pred3 = GeoStatsModels.predict(idw, [:z], Point(0.0, 0.0))
+    @test pred1 == pred2
+    @test pred1 == pred3[1]
+  end
 end

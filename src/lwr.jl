@@ -33,7 +33,7 @@ mutable struct LWRState{D<:AbstractGeoTable,T}
   X::T
 end
 
-struct FittedLWR{M<:LWR,S<:LWRState}
+struct FittedLWR{M<:LWR,S<:LWRState} <: FittedGeoStatsModel
   model::M
   state::S
 end
@@ -65,9 +65,9 @@ end
 # PREDICTION STEP
 #-----------------
 
-predict(fitted::FittedLWR, var, gₒ) = predictmean(fitted, var, gₒ)
+predict(fitted::FittedLWR, var::Symbol, gₒ) = predictmean(fitted, var, gₒ)
 
-function predictprob(fitted::FittedLWR, var, gₒ)
+function predictprob(fitted::FittedLWR, var::Symbol, gₒ)
   X, W, A, x, z = matrices(fitted, var, gₒ)
   μ = lwrmean(X, W, A, x, z)
   σ² = lwrvar(X, W, A, x)

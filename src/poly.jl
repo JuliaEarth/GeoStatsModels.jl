@@ -18,7 +18,7 @@ struct PolynomialState{D<:AbstractGeoTable,C}
   coeffs::C
 end
 
-struct FittedPolynomial{M<:Polynomial,S<:PolynomialState}
+struct FittedPolynomial{M<:Polynomial,S<:PolynomialState} <: FittedGeoStatsModel
   model::M
   state::S
 end
@@ -60,9 +60,9 @@ end
 # PREDICTION STEP
 #-----------------
 
-predict(fitted::FittedPolynomial, var, gₒ) = evalpoly(fitted, var, gₒ)
+predict(fitted::FittedPolynomial, var::Symbol, gₒ) = evalpoly(fitted, var, gₒ)
 
-predictprob(fitted::FittedPolynomial, var, gₒ) = Dirac(predict(fitted, var, gₒ))
+predictprob(fitted::FittedPolynomial, var::Symbol, gₒ) = Dirac(predict(fitted, var, gₒ))
 
 function evalpoly(fitted::FittedPolynomial, var, gₒ)
   D = domain(fitted.state.data)

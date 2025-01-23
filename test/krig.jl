@@ -8,6 +8,12 @@
   UK = GeoStatsModels.UniversalKriging
   DK = GeoStatsModels.UniversalKriging
 
+  γ = GaussianVariogram()
+  @test Kriging(γ) isa OK
+  @test Kriging(γ, 0.0) isa SK
+  @test Kriging(γ, 1, 2) isa UK
+  @test Kriging(γ, [x -> 1]) isa DK
+
   @testset "Basics" begin
     nobs = 10
     pset = rand(rng, Point, nobs) |> Scale(10)
@@ -389,11 +395,14 @@
     @test all(≥(0), var.(dkdist))
   end
 
-  @testset "Generic" begin
+  @testset "Single/Multiple" begin
+    d = georef((; z=[1.0, 0.0, 1.0]), [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)])
     γ = GaussianVariogram()
-    @test Kriging(γ) isa OK
-    @test Kriging(γ, 0.0) isa SK
-    @test Kriging(γ, 1, 2) isa UK
-    @test Kriging(γ, [x -> 1]) isa DK
+    ok = GeoStatsModels.fit(OK(γ), d)
+    pred1 = GeoStatsModels.predict(ok, :z, Point(0.0, 0.0))
+    pred2 = GeoStatsModels.predict(ok, "z", Point(0.0, 0.0))
+    pred3 = GeoStatsModels.predict(ok, [:z], Point(0.0, 0.0))
+    @test pred1 == pred2
+    @test pred1 == pred3[1]
   end
 end

@@ -38,7 +38,7 @@ end
 An object that can be used for making predictions using the
 parameters in Kriging `model` and the current Kriging `state`.
 """
-struct FittedKriging{M<:KrigingModel,S<:KrigingState}
+struct FittedKriging{M<:KrigingModel,S<:KrigingState} <: FittedGeoStatsModel
   model::M
   state::S
 end
@@ -126,7 +126,11 @@ lhsadjustments!(LHS, fun, dom) = nothing
 # PREDICTION STEP
 #-----------------
 
+predict(fitted::FittedKriging, var::AbstractString, gₒ) = predict(fitted, Symbol(var), gₒ)
+
 predict(fitted::FittedKriging, vars, gₒ) = predictmean(fitted, weights(fitted, gₒ), vars)
+
+predictprob(fitted::FittedKriging, var::AbstractString, gₒ) = predictprob(fitted, Symbol(var), gₒ)
 
 function predictprob(fitted::FittedKriging, vars, gₒ)
   w = weights(fitted, gₒ)
@@ -172,21 +176,9 @@ function predictvar(fitted::FittedKriging, weights::KrigingWeights, gₒ)
   length(σ²₊) == 1 ? first(σ²₊) : σ²₊
 end
 
-function krigvar(fun::GeoStatsFunction, weights::KrigingWeights, RHS, gₒ)
-  # auxiliary variables
-  k = size(weights.λ, 2)
+krigvar(fun::Variogram, weights::KrigingWeights, RHS, gₒ) = covvar(fun, weights, RHS, gₒ)
 
-  # compute variance contributions
-  Cλ, Cν = wmul(weights, RHS)
-
-  # compute cov(0) considering change of support
-  Cₒ = ustrip.(covzero(fun, gₒ)) * I(k)
-
-  diag(Cₒ) - diag(Cλ) - diag(Cν)
-end
-
-covzero(γ::Variogram, gₒ) = isstationary(γ) ? sill(γ) - γ(gₒ, gₒ) : γ(gₒ, gₒ)
-covzero(cov::Covariance, gₒ) = cov(gₒ, gₒ)
+krigvar(fun::Covariance, weights::KrigingWeights, RHS, gₒ) = covvar(fun, weights, RHS, gₒ)
 
 function krigvar(t::Transiogram, weights::KrigingWeights, RHS, gₒ)
   # auxiliary variables
@@ -209,6 +201,23 @@ function krigvar(t::Transiogram, weights::KrigingWeights, RHS, gₒ)
 
   diag(Cₒ) - diag(Cλ) - diag(Cν)
 end
+
+function covvar(fun::GeoStatsFunction, weights::KrigingWeights, RHS, gₒ)
+  # auxiliary variables
+  k = size(weights.λ, 2)
+
+  # compute variance contributions
+  Cλ, Cν = wmul(weights, RHS)
+
+  # compute cov(0) considering change of support
+  Cₒ = ustrip.(covzero(fun, gₒ)) * I(k)
+
+  diag(Cₒ) - diag(Cλ) - diag(Cν)
+end
+
+covzero(γ::Variogram, gₒ) = isstationary(γ) ? sill(γ) - γ(gₒ, gₒ) : γ(gₒ, gₒ)
+
+covzero(cov::Covariance, gₒ) = cov(gₒ, gₒ)
 
 # compute RHS' * [λ; ν] efficiently
 function wmul(weights::KrigingWeights, RHS)

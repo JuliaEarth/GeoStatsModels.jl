@@ -67,5 +67,14 @@
     pred = GeoStatsModels.predict(poly, :z, Point(0.0))
     @test pred isa Composition
   end
-end
 
+  @testset "Single/Multiple" begin
+    d = georef((; z=[1.0, 0.0, 1.0]), [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)])
+    poly = GeoStatsModels.fit(Polynomial(), d)
+    pred1 = GeoStatsModels.predict(poly, :z, Point(0.0, 0.0))
+    pred2 = GeoStatsModels.predict(poly, "z", Point(0.0, 0.0))
+    pred3 = GeoStatsModels.predict(poly, [:z], Point(0.0, 0.0))
+    @test pred1 == pred2
+    @test pred1 == pred3[1]
+  end
+end

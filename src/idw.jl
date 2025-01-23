@@ -29,7 +29,7 @@ struct IDWState{D<:AbstractGeoTable}
   data::D
 end
 
-struct FittedIDW{M<:IDW,S<:IDWState}
+struct FittedIDW{M<:IDW,S<:IDWState} <: FittedGeoStatsModel
   model::M
   state::S
 end
@@ -52,9 +52,9 @@ end
 # PREDICTION STEP
 #-----------------
 
-predict(fitted::FittedIDW, var, gₒ) = idw(fitted, weights(fitted, gₒ), var)
+predict(fitted::FittedIDW, var::Symbol, gₒ) = idw(fitted, weights(fitted, gₒ), var)
 
-predictprob(fitted::FittedIDW, var, gₒ) = Dirac(predict(fitted, var, gₒ))
+predictprob(fitted::FittedIDW, var::Symbol, gₒ) = Dirac(predict(fitted, var, gₒ))
 
 function idw(fitted::FittedIDW, weights, var)
   d = fitted.state.data

@@ -17,7 +17,7 @@ struct NNState{D<:AbstractGeoTable}
   data::D
 end
 
-struct FittedNN{M<:NN,S<:NNState}
+struct FittedNN{M<:NN,S<:NNState} <: FittedGeoStatsModel
   model::M
   state::S
 end
@@ -40,9 +40,9 @@ end
 # PREDICTION STEP
 #-----------------
 
-predict(fitted::FittedNN, var, gₒ) = nn(fitted, distances(fitted, gₒ), var)
+predict(fitted::FittedNN, var::Symbol, gₒ) = nn(fitted, distances(fitted, gₒ), var)
 
-predictprob(fitted::FittedNN, var, gₒ) = Dirac(predict(fitted, var, gₒ))
+predictprob(fitted::FittedNN, var::Symbol, gₒ) = Dirac(predict(fitted, var, gₒ))
 
 function nn(fitted::FittedNN, distances, var)
   d = fitted.state.data
