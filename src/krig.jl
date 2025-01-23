@@ -54,7 +54,7 @@ function fit(model::KrigingModel, data)
   LHS, RHS, ncon = initkrig(model, domain(data))
 
   # factorize LHS
-  FLHS = factorize(model, LHS)
+  FLHS = lhsfactorize(model, LHS)
 
   # record Kriging state
   state = KrigingState(data, FLHS, RHS, ncon)
@@ -78,6 +78,9 @@ function initkrig(model::KrigingModel, domain)
   # set main block with pairwise evaluation
   GeoStatsFunctions.pairwise!(LHS, fun, dom)
 
+  # adjustments for numerical stability
+  lhsadjustments!(LHS, fun, dom)
+
   # set blocks of constraints
   lhsconstraints!(model, LHS, nvar, dom)
 
@@ -87,16 +90,37 @@ function initkrig(model::KrigingModel, domain)
   LHS, RHS, ncon
 end
 
-# factorize LHS of Kriging system with appropriate method
-factorize(model::KrigingModel, LHS) = factorize(model.fun, LHS)
+# choose appropriate factorization of LHS
+lhsfactorize(model::GeoStatsModel, LHS) = lhsfactorize(model.fun, LHS)
 
-# enforce Bunch-Kaufman factorization in case of variograms
-# as they produce dense symmetric matrices (including constraints)
-factorize(::Variogram, LHS) = bunchkaufman(Symmetric(LHS), check=false)
+# Bunch-Kaufman factorization in case of dense symmetric matrices
+lhsfactorize(::Variogram, LHS) = bunchkaufman!(Symmetric(LHS), check=false)
 
-# find appropriate matrix factorization in case of general
-# geostatistical functions (e.g. covariances, transiograms)
-factorize(::GeoStatsFunction, LHS) = LinearAlgebra.factorize(LHS)
+# LU factorization in case of general square matrices
+lhsfactorize(::GeoStatsFunction, LHS) = lu!(LHS, check=false)
+
+# convert variograms into covariances for better numerical stability
+function lhsadjustments!(LHS, fun::Variogram, dom)
+  # adjustments only possible in stationary case
+  isstationary(fun) || return nothing
+
+  # retrieve total sill
+  S = ustrip.(sill(fun))
+
+  # retrieve matrix paramaters
+  nobs = nelements(dom)
+  nvar = size(S, 1)
+  nfun = nobs * nvar
+
+  @inbounds for j in 1:nfun, i in 1:nfun
+    LHS[i, j] = S[mod1(i, nvar), mod1(j, nvar)] - LHS[i, j]
+  end
+
+  nothing
+end
+
+# no adjustments in case of general geostatistical functions
+lhsadjustments!(LHS, fun, dom) = nothing
 
 #-----------------
 # PREDICTION STEP
@@ -148,14 +172,7 @@ function predictvar(fitted::FittedKriging, weights::KrigingWeights, gₒ)
   length(σ²₊) == 1 ? first(σ²₊) : σ²₊
 end
 
-function krigvar(::Variogram, weights::KrigingWeights, RHS, gₒ)
-  # compute variance contributions
-  Γλ, Γν = wmul(weights, RHS)
-
-  diag(Γλ) + diag(Γν)
-end
-
-function krigvar(cov::Covariance, weights::KrigingWeights, RHS, gₒ)
+function krigvar(fun::GeoStatsFunction, weights::KrigingWeights, RHS, gₒ)
   # auxiliary variables
   k = size(weights.λ, 2)
 
@@ -163,10 +180,13 @@ function krigvar(cov::Covariance, weights::KrigingWeights, RHS, gₒ)
   Cλ, Cν = wmul(weights, RHS)
 
   # compute cov(0) considering change of support
-  Cₒ = cov(gₒ, gₒ) * I(k)
+  Cₒ = ustrip.(covzero(fun, gₒ)) * I(k)
 
   diag(Cₒ) - diag(Cλ) - diag(Cν)
 end
+
+covzero(γ::Variogram, gₒ) = isstationary(γ) ? sill(γ) - γ(gₒ, gₒ) : γ(gₒ, gₒ)
+covzero(cov::Covariance, gₒ) = cov(gₒ, gₒ)
 
 function krigvar(t::Transiogram, weights::KrigingWeights, RHS, gₒ)
   # auxiliary variables
@@ -215,6 +235,9 @@ function weights(fitted::FittedKriging, gₒ)
   # set main blocks with pairwise evaluation
   GeoStatsFunctions.pairwise!(RHS, fun, dom, [gₒ′])
 
+  # adjustments for numerical stability
+  rhsadjustments!(RHS, fun, dom)
+
   # set blocks of constraints
   rhsconstraints!(fitted, gₒ′)
 
@@ -230,6 +253,29 @@ function weights(fitted::FittedKriging, gₒ)
 
   KrigingWeights(λ, ν)
 end
+
+# convert variograms into covariances for better numerical stability
+function rhsadjustments!(RHS, fun::Variogram, dom)
+  # adjustments only possible in stationary case
+  isstationary(fun) || return nothing
+
+  # retrieve total sill
+  S = ustrip.(sill(fun))
+
+  # retrieve matrix paramaters
+  nobs = nelements(dom)
+  nvar = size(S, 1)
+  nfun = nobs * nvar
+
+  @inbounds for j in 1:nvar, i in 1:nfun
+    RHS[i, j] = S[mod1(i, nvar), mod1(j, nvar)] - RHS[i, j]
+  end
+
+  nothing
+end
+
+# no adjustments in case of general geostatistical functions
+rhsadjustments!(RHS, fun, dom) = nothing
 
 # the following functions are implemented by
 # all variants of Kriging (e.g., SimpleKriging)
