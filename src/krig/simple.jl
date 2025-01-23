@@ -3,39 +3,49 @@
 # ------------------------------------------------------------------
 
 """
-    SimpleKriging(f, μ)
+    SimpleKriging(fun, mean)
 
-Simple Kriging with geostatistical function `f` and constant mean `μ`.
+Simple Kriging with geostatistical function `fun` and constant `mean`.
 
 ### Notes
 
 * Simple Kriging requires stationary geostatistical function
 """
-struct SimpleKriging{F<:GeoStatsFunction,M} <: KrigingModel
+struct SimpleKriging{F<:GeoStatsFunction,M<:AbstractVector} <: KrigingModel
   # input fields
-  f::F
-  μ::M
+  fun::F
+  mean::M
 
-  function SimpleKriging{F,M}(f, μ) where {F<:GeoStatsFunction,M}
-    @assert isstationary(f) "Simple Kriging requires stationary geostatistical function"
-    new(f, μ)
+  function SimpleKriging{F,M}(fun, mean) where {F<:GeoStatsFunction,M<:AbstractVector}
+    @assert isstationary(fun) "Simple Kriging requires stationary geostatistical function"
+    new(fun, mean)
   end
 end
 
-SimpleKriging(f, μ) = SimpleKriging{typeof(f),typeof(μ)}(f, μ)
+SimpleKriging(fun::F, mean::M) where {F<:GeoStatsFunction,M<:AbstractVector} = SimpleKriging{F,M}(fun, mean)
 
-nconstraints(::SimpleKriging) = 0
+SimpleKriging(fun, mean) = SimpleKriging(fun, [mean])
 
-set_constraints_lhs!(::SimpleKriging, LHS::AbstractMatrix, domain) = nothing
+nconstraints(::SimpleKriging, ::Int) = 0
 
-set_constraints_rhs!(::FittedKriging{<:SimpleKriging}, gₒ) = nothing
+lhsconstraints!(::SimpleKriging, LHS::AbstractMatrix, nvar::Int, domain) = nothing
 
-function predictmean(fitted::FittedKriging{<:SimpleKriging}, weights::KrigingWeights, var)
-  μ = fitted.model.μ
+rhsconstraints!(::FittedKriging{<:SimpleKriging}, gₒ) = nothing
+
+function krigmean(fitted::FittedKriging{<:SimpleKriging}, weights::KrigingWeights, vars)
   d = fitted.state.data
-  c = Tables.columns(values(d))
-  z = Tables.getcolumn(c, var)
+  μ = fitted.model.mean
   λ = weights.λ
-  y = [zᵢ - μ for zᵢ in z]
-  μ + sum(λ .* y)
+  k = length(vars)
+
+  @assert size(λ, 2) == k "invalid number of variables for Kriging model"
+
+  cols = Tables.columns(values(d))
+  @inbounds map(1:k) do j
+    sum(1:k) do p
+      λₚ = @view λ[p:k:end, j]
+      zₚ = Tables.getcolumn(cols, vars[p])
+      μ[p] + sum(i -> λₚ[i] * (zₚ[i] - μ[p]), eachindex(λₚ, zₚ))
+    end
+  end
 end

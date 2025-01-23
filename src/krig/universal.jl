@@ -3,75 +3,110 @@
 # ------------------------------------------------------------------
 
 """
-    UniversalKriging(f, degree, dim)
+    UniversalKriging(fun, drifts)
 
-Universal Kriging with geostatistical function `f` and
-polynomial of given `degree` on `dim` coordinates.
+Universal Kriging with geostatistical function `fun` and `drifts`.
+A drift is a function `p -> v` maps a point `p` to a unitless value `v`.
+
+    UniversalKriging(fun, deg, dim)
+
+Alternatively, construct monomial `drifts` up to given degree `deg`
+for `dim` geospatial coordinates.
 
 ### Notes
 
-* [`OrdinaryKriging`](@ref) is recovered for 0th degree polynomial
-* For non-polynomial mean, see [`ExternalDriftKriging`](@ref)
+* Drift functions should be smooth for numerical stability
+* Include a constant drift (e.g. `p -> 1`) for unbiased estimation
+* [`OrdinaryKriging`](@ref) is recovered with `drifts = [p -> 1]`
 """
-struct UniversalKriging{F<:GeoStatsFunction} <: KrigingModel
-  f::F
-  degree::Int
-  dim::Int
-  exponents::Matrix{Int}
+struct UniversalKriging{F<:GeoStatsFunction,D} <: KrigingModel
+  fun::F
+  drifts::D
+end
 
-  function UniversalKriging{F}(f, degree, dim) where {F<:GeoStatsFunction}
-    @assert degree ≥ 0 "degree must be nonnegative"
-    @assert dim > 0 "dimension must be positive"
-    exponents = UKexps(degree, dim)
-    new(f, degree, dim, exponents)
+UniversalKriging(fun::GeoStatsFunction, deg::Int, dim::Int) = UniversalKriging(fun, monomials(deg, dim))
+
+function monomials(deg::Int, dim::Int)
+  # sanity checks
+  @assert deg ≥ 0 "degree must be nonnegative"
+  @assert dim > 0 "dimension must be positive"
+
+  # helper function to extract raw coordinates
+  x(p) = CoordRefSystems.raw(coords(p))
+
+  # build drift functions for given degree and dimension
+  map(exponents(deg, dim)) do n
+    p -> prod(x(p) .^ n)
   end
 end
 
-UniversalKriging(f, degree, dim) = UniversalKriging{typeof(f)}(f, degree, dim)
+function exponents(deg::Int, dim::Int)
+  # multinomial expansion up to given degree
+  pow = reduce(hcat, stack(multiexponents(dim, d)) for d in 0:deg)
 
-function UKexps(degree::Int, dim::Int)
-  # multinomial expansion
-  expmats = [hcat(collect(multiexponents(dim, d))...) for d in 0:degree]
-  exponents = hcat(expmats...)
+  # sort for better conditioned Kriging matrices
+  inds = sortperm(vec(maximum(pow, dims=1)), rev=true)
 
-  # sort expansion for better conditioned Kriging matrices
-  sorted = sortperm(vec(maximum(exponents, dims=1)), rev=true)
-
-  exponents[:, sorted]
+  # return iterator of monomial exponents
+  eachcol(pow[:, inds])
 end
 
-nconstraints(model::UniversalKriging) = size(model.exponents, 2)
+nconstraints(model::UniversalKriging, nvar::Int) = nvar * length(model.drifts)
 
-function set_constraints_lhs!(model::UniversalKriging, LHS::AbstractMatrix, domain)
-  exponents = model.exponents
-  nobs = nelements(domain)
-  nterms = size(exponents, 2)
+function lhsconstraints!(model::UniversalKriging, LHS::AbstractMatrix, nvar::Int, domain)
+  drifts = model.drifts
 
-  # set polynomial drift blocks
-  for i in 1:nobs
-    x = CoordRefSystems.raw(coords(centroid(domain, i)))
-    for j in 1:nterms
-      LHS[nobs + j, i] = prod(x .^ exponents[:, j])
-      LHS[i, nobs + j] = LHS[nobs + j, i]
+  # retrieve size of LHS
+  nrow, ncol = size(LHS)
+
+  # number of constraints
+  ncon = nconstraints(model, nvar)
+
+  # index of first constraint
+  ind = nrow - ncon + 1
+
+  # set drift blocks
+  @inbounds for e in 1:nelements(domain)
+    p = centroid(domain, e)
+    for n in eachindex(drifts)
+      f = drifts[n](p)
+      for j in (1 + (e - 1) * nvar):(e * nvar), i in (ind + (n - 1) * nvar):(ind + n * nvar - 1)
+        LHS[i, j] = f * (i == mod1(j, nvar) + ind + (n - 1) * nvar - 1)
+      end
     end
+  end
+  @inbounds for j in ind:ncol, i in 1:(ind - 1)
+    LHS[i, j] = LHS[j, i]
   end
 
   # set zero block
-  LHS[(nobs + 1):end, (nobs + 1):end] .= zero(eltype(LHS))
+  @inbounds for j in ind:ncol, i in ind:nrow
+    LHS[i, j] = 0
+  end
 
   nothing
 end
 
-function set_constraints_rhs!(fitted::FittedKriging{<:UniversalKriging}, gₒ)
-  exponents = fitted.model.exponents
+function rhsconstraints!(fitted::FittedKriging{<:UniversalKriging}, gₒ)
   RHS = fitted.state.RHS
-  nobs = nrow(fitted.state.data)
-  nterms = size(exponents, 2)
+  ncon = fitted.state.ncon
+  drifts = fitted.model.drifts
 
-  # set polynomial drift
-  xₒ = CoordRefSystems.raw(coords(centroid(gₒ)))
-  for j in 1:nterms
-    RHS[nobs + j] = prod(xₒ .^ exponents[:, j])
+  # retrieve size of RHS
+  nrow, ncol = size(RHS)
+
+  # index of first constraint
+  ind = nrow - ncon + 1
+
+  # target point
+  pₒ = centroid(gₒ)
+
+  # set drift blocks
+  @inbounds for n in eachindex(drifts)
+    f = drifts[n](pₒ)
+    for j in 1:ncol, i in (ind + (n - 1) * ncol):(ind + n * ncol - 1)
+      RHS[i, j] = f * (i == j + ind + (n - 1) * ncol - 1)
+    end
   end
 
   nothing

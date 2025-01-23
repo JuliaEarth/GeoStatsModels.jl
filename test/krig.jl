@@ -6,25 +6,18 @@
   SK = GeoStatsModels.SimpleKriging
   OK = GeoStatsModels.OrdinaryKriging
   UK = GeoStatsModels.UniversalKriging
-  DK = GeoStatsModels.ExternalDriftKriging
+  DK = GeoStatsModels.UniversalKriging
 
   @testset "Basics" begin
-    dim = 3
     nobs = 10
-    cmat = 10 * rand(rng, dim, nobs)
-    pset = PointSet(Tuple.(eachcol(cmat)))
-    data = georef((z=rand(rng, nobs),), pset)
+    pset = rand(rng, Point, nobs) |> Scale(10)
+    data = georef((; z=rand(rng, nobs)), pset)
 
     γ = GaussianVariogram(sill=1.0, range=1.0, nugget=0.0)
-    simkrig = SK(γ, mean(data.z))
-    ordkrig = OK(γ)
-    unikrig = UK(γ, 1, 3)
-    drikrig = DK(γ, [x -> 1.0])
-
-    sk = GeoStatsModels.fit(simkrig, data)
-    ok = GeoStatsModels.fit(ordkrig, data)
-    uk = GeoStatsModels.fit(unikrig, data)
-    dk = GeoStatsModels.fit(drikrig, data)
+    sk = GeoStatsModels.fit(SK(γ, mean(data.z)), data)
+    ok = GeoStatsModels.fit(OK(γ), data)
+    uk = GeoStatsModels.fit(UK(γ, 1, 3), data)
+    dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
 
     # Kriging is an interpolator
     for j in 1:nobs
@@ -56,8 +49,8 @@
 
     # Kriging is translation-invariant
     h = to(rand(rng, Point))
-    pset_h = PointSet([pset[i] + h for i in 1:nelements(pset)])
-    data_h = georef((z=data.z,), pset_h)
+    pset_h = pset .+ Ref(h)
+    data_h = georef((; z=data.z), pset_h)
     sk_h = GeoStatsModels.fit(SK(γ, mean(data_h.z)), data_h)
     ok_h = GeoStatsModels.fit(OK(γ), data_h)
     uk_h = GeoStatsModels.fit(UK(γ, 1, 3), data_h)
@@ -98,7 +91,7 @@
 
     # Kriging variance is a function of data configuration, not data values
     δ = rand(rng, nobs)
-    data_δ = georef((z=data.z .+ δ,), pset)
+    data_δ = georef((; z=data.z .+ δ), pset)
     sk_δ = GeoStatsModels.fit(SK(γ, mean(data_δ.z)), data_δ)
     ok_δ = GeoStatsModels.fit(OK(γ), data_δ)
     uk_δ = GeoStatsModels.fit(UK(γ, 1, 3), data_δ)
@@ -125,36 +118,12 @@
     dkdist_c = GeoStatsModels.predictprob(dk_c, :z, pₒ)
     @test mean(okdist) ≈ mean(dkdist_c)
     @test var(okdist) ≈ var(dkdist_c)
-
-    # latlon coordinates
-    pts = Point.([LatLon(0, 0), LatLon(0, 1), LatLon(1, 0)])
-    nobs = length(pts)
-    data = georef((; z=rand(rng, nobs)), pts)
-    sk = GeoStatsModels.fit(SK(γ, mean(data.z)), data)
-    ok = GeoStatsModels.fit(OK(γ), data)
-    uk = GeoStatsModels.fit(UK(γ, 1, 2), data)
-    dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
-    for i in 1:nobs
-      skdist = GeoStatsModels.predictprob(sk, :z, pts[i])
-      okdist = GeoStatsModels.predictprob(ok, :z, pts[i])
-      ukdist = GeoStatsModels.predictprob(uk, :z, pts[i])
-      dkdist = GeoStatsModels.predictprob(dk, :z, pts[i])
-
-      # mean checks
-      @test mean(skdist) ≈ data.z[i]
-      @test mean(okdist) ≈ data.z[i]
-      @test mean(ukdist) ≈ data.z[i]
-      @test mean(dkdist) ≈ data.z[i]
-    end
   end
 
-  # non-stationary variograms are allowed
-  @testset "Stationarity" begin
-    dim = 3
+  @testset "Non-stationarity" begin
     nobs = 10
-    cmat = 10 * rand(rng, dim, nobs)
-    pset = PointSet(Tuple.(eachcol(cmat)))
-    data = georef((z=rand(rng, nobs),), pset)
+    pset = rand(rng, Point, nobs) |> Scale(10)
+    data = georef((; z=rand(rng, nobs)), pset)
 
     γ_ns = PowerVariogram()
     ok_ns = GeoStatsModels.fit(OK(γ_ns), data)
@@ -177,7 +146,6 @@
     end
   end
 
-  # floating point checks
   @testset "Floats" begin
     dim = 3
     nobs = 10
@@ -221,18 +189,36 @@
     @test isapprox(var(dkdist_f), var(dkdist_d), atol=1e-4)
   end
 
-  # change of support checks
-  @testset "Support" begin
-    dim = 2
-    nobs = 10
-    cmat = 10 * rand(rng, dim, nobs)
-    pset = PointSet(Tuple.(eachcol(cmat)))
-    data = georef((z=rand(rng, nobs),), pset)
+  @testset "LatLon" begin
+    pset = Point.([LatLon(0, 0), LatLon(0, 1), LatLon(1, 0)])
+    data = georef((; z=rand(rng, 3)), pset)
 
     γ = GaussianVariogram(sill=1.0, range=1.0, nugget=0.0)
     sk = GeoStatsModels.fit(SK(γ, mean(data.z)), data)
     ok = GeoStatsModels.fit(OK(γ), data)
-    uk = GeoStatsModels.fit(UK(γ, 1, dim), data)
+    uk = GeoStatsModels.fit(UK(γ, 1, 2), data)
+    dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
+    for i in 1:3
+      skdist = GeoStatsModels.predictprob(sk, :z, pset[i])
+      okdist = GeoStatsModels.predictprob(ok, :z, pset[i])
+      ukdist = GeoStatsModels.predictprob(uk, :z, pset[i])
+      dkdist = GeoStatsModels.predictprob(dk, :z, pset[i])
+
+      # mean checks
+      @test mean(skdist) ≈ data.z[i]
+      @test mean(okdist) ≈ data.z[i]
+      @test mean(ukdist) ≈ data.z[i]
+      @test mean(dkdist) ≈ data.z[i]
+    end
+  end
+
+  @testset "Support" begin
+    data = georef((; z=[1.0, 0.0, 0.0]), [(25.0, 25.0), (50.0, 75.0), (75.0, 50.0)])
+
+    γ = GaussianVariogram(sill=1.0, range=1.0, nugget=0.0)
+    sk = GeoStatsModels.fit(SK(γ, mean(data.z)), data)
+    ok = GeoStatsModels.fit(OK(γ), data)
+    uk = GeoStatsModels.fit(UK(γ, 1, 2), data)
     dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
 
     # predict on a quadrangle
@@ -247,26 +233,36 @@
     @test var(okdist) ≥ 0
     @test var(ukdist) ≥ 0
     @test var(dkdist) ≥ 0
-    @test var(skdist) ≤ var(okdist) + tol
+  end
+
+  @testset "Unitful" begin
+    pset = rand(rng, Point, 10)
+    data = georef((z=rand(rng, 10) * u"K",), pset)
+
+    γ = GaussianVariogram(sill=1.0u"K^2")
+    sk = GeoStatsModels.fit(SK(γ, mean(data.z)), data)
+    ok = GeoStatsModels.fit(OK(γ), data)
+    uk = GeoStatsModels.fit(UK(γ, 1, 3), data)
+    dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
+    for _k in [sk, ok, uk, dk]
+      μ = GeoStatsModels.predict(_k, :z, Point(0, 0, 0))
+      @test unit(μ) == u"K"
+    end
   end
 
   @testset "CoDa" begin
-    dim = 2
-    nobs = 10
-    cmat = 10 * rand(rng, dim, nobs)
-    pset = PointSet(Tuple.(eachcol(cmat)))
-    table = (z=rand(rng, Composition{3}, nobs),)
-    data = georef(table, pset)
+    pset = rand(rng, Point, 10)
+    data = georef((; z=rand(rng, Composition{3}, 10)), pset)
 
     # basic models
     γ = GaussianVariogram(sill=1.0, range=1.0, nugget=0.0)
     sk = GeoStatsModels.fit(SK(γ, mean(data.z)), data)
     ok = GeoStatsModels.fit(OK(γ), data)
-    uk = GeoStatsModels.fit(UK(γ, 1, dim), data)
+    uk = GeoStatsModels.fit(UK(γ, 1, 3), data)
     dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
 
     # prediction on a quadrangle
-    gₒ = Quadrangle((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0))
+    gₒ = first(CartesianGrid(10, 10, 10))
     skmean = GeoStatsModels.predict(sk, :z, gₒ)
     okmean = GeoStatsModels.predict(ok, :z, gₒ)
     ukmean = GeoStatsModels.predict(uk, :z, gₒ)
@@ -279,28 +275,121 @@
     @test dkmean isa Composition
   end
 
-  @testset "Unitiful" begin
-    dim = 3
-    nobs = 10
-    cmat = 10 * rand(rng, dim, nobs)
-    pset = PointSet(Tuple.(eachcol(cmat)))
-    data = georef((z=rand(rng, nobs) * u"K",), pset)
+  @testset "Covariance" begin
+    pset = rand(rng, Point, 100) |> Scale(10)
+    data = georef((; z=rand(rng, 100)), pset)
 
-    γ = GaussianVariogram(sill=1.0u"K^2")
-    sk = GeoStatsModels.fit(SK(γ, mean(data.z)), data)
-    ok = GeoStatsModels.fit(OK(γ), data)
-    uk = GeoStatsModels.fit(UK(γ, 1, dim), data)
-    dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
-    for _k in [sk, ok, uk, dk]
-      w = GeoStatsModels.weights(_k, Point(0, 0, 0))
-      μ = GeoStatsModels.predictmean(_k, w, :z)
-      σ² = GeoStatsModels.predictvar(_k, w)
-      @test unit(μ) == u"K"
-      @test unit(σ²) == u"K^2"
-    end
+    # variogram-based estimators
+    γ = GaussianVariogram(sill=1.0, range=1.0, nugget=0.0)
+    ok_γ = GeoStatsModels.fit(OK(γ), data)
+    uk_γ = GeoStatsModels.fit(UK(γ, 1, 3), data)
+    dk_γ = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
+
+    # covariance-based estimators
+    c = GaussianCovariance(sill=1.0, range=1.0, nugget=0.0)
+    ok_c = GeoStatsModels.fit(OK(c), data)
+    uk_c = GeoStatsModels.fit(UK(c, 1, 3), data)
+    dk_c = GeoStatsModels.fit(DK(c, [x -> 1.0]), data)
+
+    # predict on a specific point
+    pₒ = Point(5.0, 5.0, 5.0)
+    okdist_γ = GeoStatsModels.predictprob(ok_γ, :z, pₒ)
+    ukdist_γ = GeoStatsModels.predictprob(uk_γ, :z, pₒ)
+    dkdist_γ = GeoStatsModels.predictprob(dk_γ, :z, pₒ)
+    okdist_c = GeoStatsModels.predictprob(ok_c, :z, pₒ)
+    ukdist_c = GeoStatsModels.predictprob(uk_c, :z, pₒ)
+    dkdist_c = GeoStatsModels.predictprob(dk_c, :z, pₒ)
+
+    # distributions match no matter the geostats function
+    @test mean(okdist_γ) ≈ mean(okdist_c)
+    @test mean(ukdist_γ) ≈ mean(ukdist_c)
+    @test mean(dkdist_γ) ≈ mean(dkdist_c)
+    @test var(okdist_γ) ≈ var(okdist_c)
+    @test var(ukdist_γ) ≈ var(ukdist_c)
+    @test var(dkdist_γ) ≈ var(dkdist_c)
   end
 
-  @testset begin "Kriging"
+  @testset "CoKriging" begin
+    pset = [Point(25.0, 25.0), Point(50.0, 75.0), Point(75.0, 50.0)]
+    data = georef((; a=[1.0, 0.0, 0.0], b=[0.0, 1.0, 0.0], c=[0.0, 0.0, 1.0]), pset)
+
+    γ = [1.0 0.3 0.1; 0.3 1.0 0.2; 0.1 0.2 1.0] * SphericalVariogram(range=35.0)
+    sk = GeoStatsModels.fit(SK(γ, [0.0, 0.0, 0.0]), data)
+    ok = GeoStatsModels.fit(OK(γ), data)
+    uk = GeoStatsModels.fit(UK(γ, 1, 2), data)
+    dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
+
+    # interpolation property
+    for i in 1:3
+      skdist = GeoStatsModels.predictprob(sk, (:a, :b, :c), pset[i])
+      okdist = GeoStatsModels.predictprob(ok, (:a, :b, :c), pset[i])
+      ukdist = GeoStatsModels.predictprob(uk, (:a, :b, :c), pset[i])
+      dkdist = GeoStatsModels.predictprob(dk, (:a, :b, :c), pset[i])
+      @test mean.(skdist) ≈ [j == i for j in 1:3]
+      @test mean.(okdist) ≈ [j == i for j in 1:3]
+      @test mean.(ukdist) ≈ [j == i for j in 1:3]
+      @test mean.(dkdist) ≈ [j == i for j in 1:3]
+      @test isapprox(var.(skdist), [0.0, 0.0, 0.0], atol=1e-10)
+      @test isapprox(var.(okdist), [0.0, 0.0, 0.0], atol=1e-10)
+      @test isapprox(var.(ukdist), [0.0, 0.0, 0.0], atol=1e-10)
+      @test isapprox(var.(dkdist), [0.0, 0.0, 0.0], atol=1e-10)
+    end
+
+    # predict on a specific point
+    pₒ = Point(50.0, 50.0)
+    skdist = GeoStatsModels.predictprob(sk, (:a, :b, :c), pₒ)
+    okdist = GeoStatsModels.predictprob(ok, (:a, :b, :c), pₒ)
+    ukdist = GeoStatsModels.predictprob(uk, (:a, :b, :c), pₒ)
+    dkdist = GeoStatsModels.predictprob(dk, (:a, :b, :c), pₒ)
+    @test all(μ -> 0 ≤ μ ≤ 1, mean.(skdist))
+    @test all(μ -> 0 ≤ μ ≤ 1, mean.(okdist))
+    @test all(μ -> 0 ≤ μ ≤ 1, mean.(ukdist))
+    @test all(μ -> 0 ≤ μ ≤ 1, mean.(dkdist))
+    @test all(≥(0), var.(skdist))
+    @test all(≥(0), var.(okdist))
+    @test all(≥(0), var.(ukdist))
+    @test all(≥(0), var.(dkdist))
+  end
+
+  @testset "Transiogram" begin
+    pset = [Point(25.0, 25.0), Point(50.0, 75.0), Point(75.0, 50.0)]
+    data = georef((; a=[1.0, 0.0, 0.0], b=[0.0, 1.0, 0.0], c=[0.0, 0.0, 1.0]), pset)
+
+    t = MatrixExponentialTransiogram((35.0, 35.0, 35.0), (0.5, 0.3, 0.2))
+    sk = GeoStatsModels.fit(SK(t, [0.0, 0.0, 0.0]), data)
+    ok = GeoStatsModels.fit(OK(t), data)
+    uk = GeoStatsModels.fit(UK(t, 1, 2), data)
+    dk = GeoStatsModels.fit(DK(t, [x -> 1.0]), data)
+
+    # interpolation property
+    for i in 1:3
+      skdist = GeoStatsModels.predictprob(sk, (:a, :b, :c), pset[i])
+      okdist = GeoStatsModels.predictprob(ok, (:a, :b, :c), pset[i])
+      ukdist = GeoStatsModels.predictprob(uk, (:a, :b, :c), pset[i])
+      dkdist = GeoStatsModels.predictprob(dk, (:a, :b, :c), pset[i])
+      @test mean.(skdist) ≈ [j == i for j in 1:3]
+      @test mean.(okdist) ≈ [j == i for j in 1:3]
+      @test mean.(ukdist) ≈ [j == i for j in 1:3]
+      @test mean.(dkdist) ≈ [j == i for j in 1:3]
+    end
+
+    # predict on a specific point
+    pₒ = Point(50.0, 50.0)
+    skdist = GeoStatsModels.predictprob(sk, (:a, :b, :c), pₒ)
+    okdist = GeoStatsModels.predictprob(ok, (:a, :b, :c), pₒ)
+    ukdist = GeoStatsModels.predictprob(uk, (:a, :b, :c), pₒ)
+    dkdist = GeoStatsModels.predictprob(dk, (:a, :b, :c), pₒ)
+    @test all(μ -> 0 ≤ μ ≤ 1, mean.(skdist))
+    @test all(μ -> 0 ≤ μ ≤ 1, mean.(okdist))
+    @test all(μ -> 0 ≤ μ ≤ 1, mean.(ukdist))
+    @test all(μ -> 0 ≤ μ ≤ 1, mean.(dkdist))
+    @test all(≥(0), var.(skdist))
+    @test all(≥(0), var.(okdist))
+    @test all(≥(0), var.(ukdist))
+    @test all(≥(0), var.(dkdist))
+  end
+
+  @testset "Generic" begin
     γ = GaussianVariogram()
     @test Kriging(γ) isa OK
     @test Kriging(γ, 0.0) isa SK

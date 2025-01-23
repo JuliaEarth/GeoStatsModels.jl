@@ -5,21 +5,21 @@
 """
     KrigingModel
 
-A Kriging model (e.g. Simple Kriging).
+A Kriging model (e.g. Simple Kriging, Ordinary Kriging).
 """
 abstract type KrigingModel <: GeoStatsModel end
 
 """
-    KrigingState(data, LHS, RHS, STDSQ)
+    KrigingState(data, LHS, RHS, ncon)
 
 A Kriging state stores information needed
 to perform estimation at any given geometry.
 """
-mutable struct KrigingState{D<:AbstractGeoTable,F<:Factorization,T,S}
+mutable struct KrigingState{D<:AbstractGeoTable,F,A}
   data::D
   LHS::F
-  RHS::Vector{T}
-  STDSQ::S
+  RHS::A
+  ncon::Int
 end
 
 """
@@ -27,7 +27,7 @@ end
 
 An object storing Kriging weights `λ` and Lagrange multipliers `ν`.
 """
-struct KrigingWeights{T<:Real,A<:AbstractVector{T}}
+struct KrigingWeights{A}
   λ::A
   ν::A
 end
@@ -50,185 +50,192 @@ status(fitted::FittedKriging) = issuccess(fitted.state.LHS)
 #--------------
 
 function fit(model::KrigingModel, data)
-  # geostatistical function and domain
-  f = model.f
-  D = domain(data)
-
-  # build Kriging system
-  LHS = lhs(model, D)
-  RHS = Vector{eltype(LHS)}(undef, size(LHS, 1))
+  # initialize Kriging system
+  LHS, RHS, ncon = initkrig(model, domain(data))
 
   # factorize LHS
   FLHS = factorize(model, LHS)
 
-  # variance (σ²) type
-  STDSQ, _ = GeoStatsFunctions.matrixparams(f, D)
-
   # record Kriging state
-  state = KrigingState(data, FLHS, RHS, STDSQ)
+  state = KrigingState(data, FLHS, RHS, ncon)
 
-  # return fitted model
   FittedKriging(model, state)
 end
 
-"""
-    lhs(model, domain)
+# initialize Kriging system
+function initkrig(model::KrigingModel, domain)
+  fun = model.fun
+  dom = domain
 
-Return LHS of Kriging system for the elements in the `domain`.
-"""
-function lhs(model::KrigingModel, domain)
-  f = model.f
-  V, (_, nobs, nvars) = GeoStatsFunctions.matrixparams(f, domain)
+  # retrieve matrix parameters
+  V, (_, nobs, nvar) = GeoStatsFunctions.matrixparams(fun, dom)
+  ncon = nconstraints(model, nvar)
+  nrow = nobs * nvar + ncon
 
   # pre-allocate memory for LHS
-  nmat = nobs * nvars
-  ncon = nconstraints(model)
-  G = Matrix{V}(undef, nmat + ncon, nmat + ncon)
+  LHS = Matrix{V}(undef, nrow, nrow)
 
   # set main block with pairwise evaluation
-  GeoStatsFunctions.pairwise!(G, f, domain)
-  if isstationary(f)
-    σ² = sill(f)
-    for j in 1:nmat, i in 1:nmat
-      @inbounds G[i, j] = σ² - G[i, j]
-    end
-  end
-
-  # strip units if necessary
-  LHS = ustrip.(G)
+  GeoStatsFunctions.pairwise!(LHS, fun, dom)
 
   # set blocks of constraints
-  set_constraints_lhs!(model, LHS, domain)
+  lhsconstraints!(model, LHS, nvar, dom)
 
-  LHS
+  # pre-allocate memory for RHS
+  RHS = similar(LHS, nrow, nvar)
+
+  LHS, RHS, ncon
 end
 
-"""
-    nconstraints(model)
+# factorize LHS of Kriging system with appropriate method
+factorize(model::KrigingModel, LHS) = factorize(model.fun, LHS)
 
-Return number of constraints for Kriging `model`.
-"""
-function nconstraints end
+# enforce Bunch-Kaufman factorization in case of variograms
+# as they produce dense symmetric matrices (including constraints)
+factorize(::Variogram, LHS) = bunchkaufman(Symmetric(LHS), check=false)
 
-"""
-    set_constraints_lhs!(model, LHS, X)
-
-Set constraints in LHS of Kriging system.
-"""
-function set_constraints_lhs! end
-
-"""
-    factorize(model, LHS)
-
-Factorize LHS of Kriging system with appropriate
-factorization method.
-"""
-factorize(::KrigingModel, LHS) = bunchkaufman(Symmetric(LHS), check=false)
+# find appropriate matrix factorization in case of general
+# geostatistical functions (e.g. covariances, transiograms)
+factorize(::GeoStatsFunction, LHS) = LinearAlgebra.factorize(LHS)
 
 #-----------------
 # PREDICTION STEP
 #-----------------
 
-predict(fitted::FittedKriging, var, uₒ) = predictmean(fitted, weights(fitted, uₒ), var)
+predict(fitted::FittedKriging, vars, gₒ) = predictmean(fitted, weights(fitted, gₒ), vars)
 
-function predictprob(fitted::FittedKriging, var, uₒ)
-  w = weights(fitted, uₒ)
-  μ = predictmean(fitted, w, var)
-  σ² = predictvar(fitted, w)
-  Normal(μ, √σ²)
+function predictprob(fitted::FittedKriging, vars, gₒ)
+  w = weights(fitted, gₒ)
+  μ = predictmean(fitted, w, vars)
+  σ² = predictvar(fitted, w, gₒ)
+  # https://github.com/JuliaStats/Distributions.jl/issues/1413
+  @. Normal(ustrip(μ), √σ²)
 end
 
-"""
-    predictmean(fitted, var, weights)
+predictmean(fitted::FittedKriging, weights::KrigingWeights, vars) = krigmean(fitted, weights, vars)
+predictmean(fitted::FittedKriging, weights::KrigingWeights, var::Symbol) = first(predictmean(fitted, weights, (var,)))
+predictmean(fitted::FittedKriging, weights::KrigingWeights, var::AbstractString) =
+  predictmean(fitted, weights, Symbol(var))
 
-Posterior mean of `fitted` Kriging model for variable `var`
-with Kriging `weights`.
-"""
-function predictmean(fitted::FittedKriging, weights::KrigingWeights, var)
+function krigmean(fitted::FittedKriging, weights::KrigingWeights, vars)
   d = fitted.state.data
-  c = Tables.columns(values(d))
-  z = Tables.getcolumn(c, var)
   λ = weights.λ
-  sum(i -> λ[i] * z[i], eachindex(λ, z))
+  k = length(vars)
+
+  @assert size(λ, 2) == k "invalid number of variables for Kriging model"
+
+  cols = Tables.columns(values(d))
+  @inbounds map(1:k) do j
+    sum(1:k) do p
+      λₚ = @view λ[p:k:end, j]
+      zₚ = Tables.getcolumn(cols, vars[p])
+      sum(i -> λₚ[i] * zₚ[i], eachindex(λₚ, zₚ))
+    end
+  end
 end
 
-"""
-    predictvar(fitted, var, weights)
+function predictvar(fitted::FittedKriging, weights::KrigingWeights, gₒ)
+  RHS = fitted.state.RHS
+  fun = fitted.model.fun
 
-Posterior variance of `fitted` Kriging model for variable `var`
-with Kriging `weights`.
-"""
-function predictvar(fitted::FittedKriging, weights::KrigingWeights)
-  f = fitted.model.f
-  b = fitted.state.RHS
-  V = fitted.state.STDSQ
+  # variance formula for given function
+  σ² = krigvar(fun, weights, RHS, gₒ)
+
+  # treat numerical issues
+  σ²₊ = max.(zero(σ²), σ²)
+
+  # treat scalar case
+  length(σ²₊) == 1 ? first(σ²₊) : σ²₊
+end
+
+function krigvar(::Variogram, weights::KrigingWeights, RHS, gₒ)
+  # compute variance contributions
+  Γλ, Γν = wmul(weights, RHS)
+
+  diag(Γλ) + diag(Γν)
+end
+
+function krigvar(cov::Covariance, weights::KrigingWeights, RHS, gₒ)
+  # auxiliary variables
+  k = size(weights.λ, 2)
+
+  # compute variance contributions
+  Cλ, Cν = wmul(weights, RHS)
+
+  # compute cov(0) considering change of support
+  Cₒ = cov(gₒ, gₒ) * I(k)
+
+  diag(Cₒ) - diag(Cλ) - diag(Cν)
+end
+
+function krigvar(t::Transiogram, weights::KrigingWeights, RHS, gₒ)
+  # auxiliary variables
+  n, k = size(weights.λ)
+  p = proportions(t)
+
+  # convert transiograms to covariances
+  COV = deepcopy(RHS)
+  @inbounds for j in 1:k, i in 1:n
+    # Eq. 12 of Carle & Fogg 1996
+    COV[i, j] = p[mod1(i, k)] * (COV[i, j] - p[j])
+  end
+
+  # compute variance contributions
+  Cλ, Cν = wmul(weights, COV)
+
+  # compute cov(0) considering change of support
+  Tₒ = t(gₒ, gₒ)
+  Cₒ = @inbounds [p[i] * (Tₒ[i, j] - p[j]) for i in 1:k, j in 1:k]
+
+  diag(Cₒ) - diag(Cλ) - diag(Cν)
+end
+
+# compute RHS' * [λ; ν] efficiently
+function wmul(weights::KrigingWeights, RHS)
   λ = weights.λ
   ν = weights.ν
+  n = size(λ, 1)
+  b = transpose(RHS)
+  Kλ = (@view b[:, 1:n]) * λ
+  Kν = (@view b[:, (n + 1):end]) * ν
 
-  # compute b⋅[λ;ν]
-  n = length(λ)
-  m = length(b)
-  c₁ = view(b, 1:n) ⋅ λ
-  c₂ = view(b, (n + 1):m) ⋅ ν
-  c = c₁ + c₂
-
-  σ² = isstationary(f) ? sill(f) - V(c) : V(c)
-
-  max(zero(V), σ²)
+  Kλ, Kν
 end
 
-"""
-    weights(model, uₒ)
-
-Weights λ (and Lagrange multipliers ν) for the
-Kriging `model` at geometry `uₒ`.
-"""
-function weights(fitted::FittedKriging, uₒ)
+function weights(fitted::FittedKriging, gₒ)
+  LHS = fitted.state.LHS
+  RHS = fitted.state.RHS
+  ncon = fitted.state.ncon
   dom = domain(fitted.state.data)
-  nobs = nrow(fitted.state.data)
+  fun = fitted.model.fun
 
-  # adjust CRS of uₒ
-  uₒ′ = uₒ |> Proj(crs(dom))
+  # adjust CRS of gₒ
+  gₒ′ = gₒ |> Proj(crs(dom))
 
-  set_rhs!(fitted, uₒ′)
+  # set main blocks with pairwise evaluation
+  GeoStatsFunctions.pairwise!(RHS, fun, dom, [gₒ′])
+
+  # set blocks of constraints
+  rhsconstraints!(fitted, gₒ′)
 
   # solve Kriging system
-  s = fitted.state.LHS \ fitted.state.RHS
+  W = LHS \ RHS
 
-  λ = view(s, 1:nobs)
-  ν = view(s, (nobs + 1):length(s))
+  # index of first constraint
+  ind = size(LHS, 1) - ncon + 1
+
+  # split weights and Lagrange multipliers
+  λ = @view W[begin:(ind - 1), :]
+  ν = @view W[ind:end, :]
 
   KrigingWeights(λ, ν)
 end
 
-"""
-    set_rhs!(model, uₒ)
-
-Set RHS of Kriging system at geometry `uₒ`.
-"""
-function set_rhs!(fitted::FittedKriging, uₒ)
-  f = fitted.model.f
-  dom = domain(fitted.state.data)
-  nel = nelements(dom)
-  RHS = fitted.state.RHS
-
-  # set RHS with function evaluation
-  g = map(u -> f(u, uₒ), dom)
-  RHS[1:nel] .= ustrip.(g)
-  if isstationary(f)
-    σ² = ustrip(sill(f))
-    RHS[1:nel] .= σ² .- RHS[1:nel]
-  end
-
-  set_constraints_rhs!(fitted, uₒ)
-end
-
-"""
-    set_constraints_rhs!(model, xₒ)
-
-Set constraints in RHS of Kriging system.
-"""
-function set_constraints_rhs! end
+# the following functions are implemented by
+# all variants of Kriging (e.g., SimpleKriging)
+function nconstraints end
+function lhsconstraints! end
+function rhsconstraints! end
 
 # ----------------
 # IMPLEMENTATIONS
@@ -237,33 +244,28 @@ function set_constraints_rhs! end
 include("krig/simple.jl")
 include("krig/ordinary.jl")
 include("krig/universal.jl")
-include("krig/externaldrift.jl")
 
 """
     Kriging(f)
 
-Equivalent to [`OrdinaryKriging`](@ref) with
-geostatistical function `f`.
+Equivalent to [`OrdinaryKriging`](@ref).
 
     Kriging(f, μ)
 
-Equivalent to [`SimpleKriging`](@ref) with
-geostatistical function `f` and constant mean `μ`.
+Equivalent to [`SimpleKriging`](@ref).
 
     Kriging(f, deg, dim)
 
-Equivalent to [`UniversalKriging`](@ref) with
-geostatistical function `f` and `deg`-order
-polynomial in `dim`-dimensinal space.
+Equivalent to [`UniversalKriging`](@ref).
 
     Kriging(f, drifts)
 
-Equivalent to [`ExternalDriftKriging`](@ref) with
-geostatistical `f` and `drifts` functions.
+Equivalent to [`UniversalKriging`](@ref).
 
 Please check the docstring of corresponding models for more details.
 """
-Kriging(f) = OrdinaryKriging(f)
-Kriging(f, μ::Number) = SimpleKriging(f, μ)
-Kriging(f, deg::Int, dim::Int) = UniversalKriging(f, deg, dim)
-Kriging(f, drifts::AbstractVector) = ExternalDriftKriging(f, drifts)
+Kriging(f::GeoStatsFunction) = OrdinaryKriging(f)
+Kriging(f::GeoStatsFunction, μ::Number) = SimpleKriging(f, μ)
+Kriging(f::GeoStatsFunction, μ::AbstractVector{<:Number}) = SimpleKriging(f, μ)
+Kriging(f::GeoStatsFunction, deg::Int, dim::Int) = UniversalKriging(f, deg, dim)
+Kriging(f::GeoStatsFunction, drifts::AbstractVector) = UniversalKriging(f, drifts)
