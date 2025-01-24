@@ -82,14 +82,11 @@ function fitpredict(
   neighborhood=nothing,
   distance=Euclidean()
 )
-  # always use absolute units
-  stab = absunits(values(gtb))
-
   # point or volume support
   sdom = point ? pointsupport(domain(gtb)) : domain(gtb)
 
   # adjusted geotable
-  gtb′ = georef(stab, sdom)
+  gtb′ = georef(values(gtb), sdom)
 
   if neighbors
     fitpredictneigh(model, gtb′, dom, path, point, prob, minneighbors, maxneighbors, neighborhood, distance)
@@ -208,3 +205,9 @@ include("idw.jl")
 include("lwr.jl")
 include("poly.jl")
 include("krig.jl")
+
+# -----------------
+# HELPER FUNCTIONS
+# -----------------
+
+pointsupport(domain) = PointSet(centroid(domain, i) for i in 1:nelements(domain))

@@ -25,12 +25,6 @@
     nn = GeoStatsModels.fit(NN(), d)
     pred = GeoStatsModels.predict(nn, :z, Point(0.0))
     @test unit(pred) == u"K"
-
-    # affine units
-    d = georef((; z=[1.0, 0.0, 1.0]u"°C"))
-    nn = GeoStatsModels.fit(NN(), d)
-    #pred = GeoStatsModels.predict(nn, :z, Point(0.0))
-    #@test unit(pred) == u"K"
   end
 
   @testset "CoDa" begin

@@ -20,9 +20,6 @@ using Unitful: AffineQuantity
 
 include("models.jl")
 
-# utility functions
-include("utils.jl")
-
 export
   # models
   NN,

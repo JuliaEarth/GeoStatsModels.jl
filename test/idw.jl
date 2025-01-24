@@ -5,12 +5,6 @@
     pred = GeoStatsModels.predict(idw, :z, Point(0.0))
     @test unit(pred) == u"K"
 
-    # affine units
-    d = georef((; z=[1.0, 0.0, 1.0]u"°C"))
-    idw = GeoStatsModels.fit(IDW(), d)
-    #pred = GeoStatsModels.predict(idw, :z, Point(0.0))
-    #@test unit(pred) == u"K"
-
     # latlon coordinates
     d = georef((; z=[1.0, 0.0, 1.0]), Point.([LatLon(0, 1), LatLon(0, 2), LatLon(0, 3)]))
     idw = GeoStatsModels.fit(IDW(1, Haversine()), d)
