@@ -76,9 +76,8 @@ function evalpoly(fitted::FittedPolynomial, var, gₒ)
 end
 
 function vandermonde(xs, d)
-  x = first(xs)
-  n = length(x)
-  es = Iterators.flatten(multiexponents(n, d) for d in 0:d)
-  ps = [[prod(x .^ e) for x in xs] for e in es]
-  reduce(hcat, ps)
+  n = length(first(xs))
+  I = (multiexponents(n, d) for d in 0:d)
+  es = Iterators.flatten(I) |> collect
+  [prod(x .^ e) for x in xs, e in es]
 end
