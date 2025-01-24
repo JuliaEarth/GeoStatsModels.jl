@@ -95,18 +95,7 @@ function fitpredict(
   end
 end
 
-function fitpredictneigh(
-  model,
-  gtb,
-  dom,
-  path,
-  point,
-  prob,
-  minneighbors,
-  maxneighbors,
-  neighborhood,
-  distance
-)
+function fitpredictneigh(model, gtb, dom, path, point, prob, minneighbors, maxneighbors, neighborhood, distance)
   # fix neighbors limits
   nobs = nrow(gtb)
   if maxneighbors > nobs || maxneighbors < 1
