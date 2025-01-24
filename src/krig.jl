@@ -141,9 +141,8 @@ function predictprob(fitted::FittedKriging, vars, gₒ)
 end
 
 predictmean(fitted::FittedKriging, weights::KrigingWeights, vars) = krigmean(fitted, weights, vars)
+
 predictmean(fitted::FittedKriging, weights::KrigingWeights, var::Symbol) = first(predictmean(fitted, weights, (var,)))
-predictmean(fitted::FittedKriging, weights::KrigingWeights, var::AbstractString) =
-  predictmean(fitted, weights, Symbol(var))
 
 function krigmean(fitted::FittedKriging, weights::KrigingWeights, vars)
   d = fitted.state.data
