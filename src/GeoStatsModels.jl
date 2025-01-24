@@ -16,8 +16,6 @@ using Distances
 using Unitful
 using Tables
 
-using Unitful: AffineQuantity
-
 include("models.jl")
 
 export
