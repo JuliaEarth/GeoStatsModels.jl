@@ -11,10 +11,10 @@ of a geospatial domain near other geometries with samples.
 abstract type GeoStatsModel end
 
 """
-    fit(model, data)
+    fit(model, geotable)
 
-Fit geostatistical `model` to geospatial `data` and return a
-fitted geostatistical model.
+Fit geostatistical `model` to `geotable` and return a fitted
+geostatistical model.
 """
 function fit end
 
@@ -53,9 +53,9 @@ Return the status of the `fitted` geostatistical model.
 function status end
 
 """
-    fitpredict(model, data, domain; [parameters])
+    fitpredict(model, geotable, domain; [parameters])
 
-Fit geostatistical `model` to `data` and predict all its
+Fit geostatistical `model` to `geotable` and predict all
 variables on `domain` using a set of optional parameters.
 
 ## Parameters
@@ -210,4 +210,4 @@ include("krig.jl")
 # HELPER FUNCTIONS
 # -----------------
 
-pointsupport(domain) = PointSet(centroid(domain, i) for i in 1:nelements(domain))
+pointsupport(dom) = PointSet(centroid(dom, i) for i in 1:nelements(dom))
