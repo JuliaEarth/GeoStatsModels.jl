@@ -2,27 +2,44 @@
 # Licensed under the MIT License. See LICENSE in the project root.
 # ------------------------------------------------------------------
 
+"""
+    fitpredict(model, data, domain; [parameters])
+
+Fit geostatistical `model` to `data` and predict on `domain`
+using a set of optional parameters.
+
+## Parameters
+
+* `neighbors`    - Whether or not to use neighborhood (default to `true`)
+* `minneighbors` - Minimum number of neighbors (default to `1`)
+* `maxneighbors` - Maximum number of neighbors (default to `10`)
+* `neighborhood` - Search neighborhood (default to `nothing`)
+* `distance`     - Distance to find nearest neighbors (default to `Euclidean()`)
+* `path`         - Path over the domain (default to `LinearPath()`)
+* `point`        - Perform interpolation on point support (default to `true`)
+* `prob`         - Perform probabilistic interpolation (default to `false`)
+"""
 function fitpredict(
   model::GeoStatsModel,
   geotable::AbstractGeoTable,
   pdomain::Domain;
-  path=LinearPath(),
-  point=true,
-  prob=false,
   neighbors=true,
   minneighbors=1,
   maxneighbors=10,
+  neighborhood=nothing,
   distance=Euclidean(),
-  neighborhood=nothing
+  path=LinearPath(),
+  point=true,
+  prob=false
 )
   if neighbors
-    _fitpredictneigh(model, geotable, pdomain, path, point, prob, minneighbors, maxneighbors, distance, neighborhood)
+    fitpredictneigh(model, geotable, pdomain, minneighbors, maxneighbors, neighborhood, distance, path, point, prob)
   else
-    _fitpredictall(model, geotable, pdomain, path, point, prob)
+    fitpredictall(model, geotable, pdomain, path, point, prob)
   end
 end
 
-function _fitpredictall(model, geotable, pdomain, path, point, prob)
+function fitpredictall(model, geotable, pdomain, path, point, prob)
   table = values(geotable)
   ddomain = domain(geotable)
   vars = Tables.schema(table).names
@@ -57,17 +74,17 @@ function _fitpredictall(model, geotable, pdomain, path, point, prob)
   georef(newtab, pdomain)
 end
 
-function _fitpredictneigh(
+function fitpredictneigh(
   model,
   geotable,
   pdomain,
-  path,
-  point,
-  prob,
   minneighbors,
   maxneighbors,
+  neighborhood,
   distance,
-  neighborhood
+  path,
+  point,
+  prob
 )
   table = values(geotable)
   ddomain = domain(geotable)
