@@ -52,6 +52,153 @@ Return the status of the `fitted` geostatistical model.
 """
 function status end
 
+"""
+    fitpredict(model, data, domain; [parameters])
+
+Fit geostatistical `model` to `data` and predict all its
+variables on `domain` using a set of optional parameters.
+
+## Parameters
+
+* `path`         - Path over the domain (default to `LinearPath()`)
+* `point`        - Perform interpolation on point support (default to `true`)
+* `prob`         - Perform probabilistic interpolation (default to `false`)
+* `neighbors`    - Whether or not to use neighborhood (default to `true`)
+* `minneighbors` - Minimum number of neighbors (default to `1`)
+* `maxneighbors` - Maximum number of neighbors (default to `10`)
+* `neighborhood` - Search neighborhood (default to `nothing`)
+* `distance`     - Distance to find nearest neighbors (default to `Euclidean()`)
+"""
+function fitpredict(
+  model::GeoStatsModel,
+  gtb::AbstractGeoTable,
+  dom::Domain;
+  path=LinearPath(),
+  point=true,
+  prob=false,
+  neighbors=true,
+  minneighbors=1,
+  maxneighbors=10,
+  neighborhood=nothing,
+  distance=Euclidean()
+)
+  # always use absolute units
+  stab = absunits(values(gtb))
+
+  # point or volume support
+  sdom = point ? pointsupport(domain(gtb)) : domain(gtb)
+
+  # adjusted geotable
+  gtb′ = georef(stab, sdom)
+
+  if neighbors
+    fitpredictneigh(model, gtb′, dom, path, point, prob, minneighbors, maxneighbors, neighborhood, distance)
+  else
+    fitpredictfull(model, gtb′, dom, path, point, prob)
+  end
+end
+
+function fitpredictneigh(
+  model,
+  gtb,
+  dom,
+  path,
+  point,
+  prob,
+  minneighbors,
+  maxneighbors,
+  neighborhood,
+  distance
+)
+  # fix neighbors limits
+  nobs = nrow(gtb)
+  if maxneighbors > nobs || maxneighbors < 1
+    maxneighbors = nobs
+  end
+  if minneighbors > maxneighbors || minneighbors < 1
+    minneighbors = 1
+  end
+
+  # determine bounded search method
+  searcher = if isnothing(neighborhood)
+    # nearest neighbor search with a metric
+    KNearestSearch(domain(gtb), maxneighbors; metric=distance)
+  else
+    # neighbor search with ball neighborhood
+    KBallSearch(domain(gtb), maxneighbors, neighborhood)
+  end
+
+  # pre-allocate memory for neighbors
+  neighbors = Vector{Int}(undef, maxneighbors)
+
+  # traverse domain with given path
+  inds = traverse(dom, path)
+
+  # prediction function
+  predfun = prob ? predictprob : predict
+
+  # predict variables
+  cols = Tables.columns(values(gtb))
+  vars = Tables.columnnames(cols)
+  pred = @inbounds map(inds) do ind
+    # centroid of estimation
+    center = centroid(dom, ind)
+
+    # find neighbors with data
+    nneigh = search!(neighbors, center, searcher)
+
+    # predict if enough neighbors
+    if nneigh ≥ minneighbors
+      # final set of neighbors
+      ninds = view(neighbors, 1:nneigh)
+
+      # view neighborhood with data
+      samples = view(gtb, ninds)
+
+      # fit model to samples
+      fmodel = fit(model, samples)
+
+      # save prediction
+      geom = point ? center : dom[ind]
+      vals = predfun(fmodel, vars, geom)
+    else
+      # missing prediction
+      vals = fill(missing, length(vars))
+    end
+    (; zip(vars, vals)...)
+  end
+
+  # convert to original table type
+  predtab = pred |> Tables.materializer(values(gtb))
+
+  georef(predtab, dom)
+end
+
+function fitpredictfull(model, gtb, dom, path, point, prob)
+  # traverse domain with given path
+  inds = traverse(dom, path)
+
+  # prediction function
+  predfun = prob ? predictprob : predict
+
+  # fit model to data
+  fmodel = fit(model, gtb)
+
+  # predict variables
+  cols = Tables.columns(values(gtb))
+  vars = Tables.columnnames(cols)
+  pred = @inbounds map(inds) do ind
+    geom = point ? centroid(dom, ind) : dom[ind]
+    vals = predfun(fmodel, vars, geom)
+    (; zip(vars, vals)...)
+  end
+
+  # convert to original table type
+  predtab = pred |> Tables.materializer(values(gtb))
+
+  georef(predtab, dom)
+end
+
 # ----------------
 # IMPLEMENTATIONS
 # ----------------
