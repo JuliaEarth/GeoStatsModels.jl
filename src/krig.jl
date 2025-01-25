@@ -310,19 +310,19 @@ include("krig/ordinary.jl")
 include("krig/universal.jl")
 
 """
-    Kriging(f)
-
-Equivalent to [`OrdinaryKriging`](@ref).
-
-    Kriging(f, μ)
+    Kriging(fun, mean)
 
 Equivalent to [`SimpleKriging`](@ref).
 
-    Kriging(f, deg, dim)
+    Kriging(fun)
+
+Equivalent to [`OrdinaryKriging`](@ref).
+
+    Kriging(fun, drifts)
 
 Equivalent to [`UniversalKriging`](@ref).
 
-    Kriging(f, drifts)
+    Kriging(fun, deg, dim)
 
 Equivalent to [`UniversalKriging`](@ref).
 
