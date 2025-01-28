@@ -74,6 +74,12 @@ function initkrig(model::KrigingModel, data)
   ncon = nconstraints(model, nvar)
   nrow = nobs * nvar + ncon
 
+  # make sure data is compatible with model
+  nfeat = ncol(data) - 1
+  if nfeat != nvar
+    throw(ArgumentError("$nfeat data column(s) provided to $nvar-variate Kriging model"))
+  end
+
   # pre-allocate memory for LHS
   LHS = Matrix{V}(undef, nrow, nrow)
 
@@ -168,9 +174,13 @@ end
 
 predict(fitted::FittedKriging, var::AbstractString, gₒ) = predict(fitted, Symbol(var), gₒ)
 
+predict(fitted::FittedKriging, var::Symbol, gₒ) = predict(fitted, (var,), gₒ) |> first
+
 predict(fitted::FittedKriging, vars, gₒ) = predictmean(fitted, weights(fitted, gₒ), vars)
 
 predictprob(fitted::FittedKriging, var::AbstractString, gₒ) = predictprob(fitted, Symbol(var), gₒ)
+
+predictprob(fitted::FittedKriging, var::Symbol, gₒ) = predictprob(fitted, (var,), gₒ) |> first
 
 function predictprob(fitted::FittedKriging, vars, gₒ)
   w = weights(fitted, gₒ)
@@ -182,29 +192,15 @@ end
 
 predictmean(fitted::FittedKriging, weights::KrigingWeights, vars) = krigmean(fitted, weights, vars)
 
-predictmean(fitted::FittedKriging, weights::KrigingWeights, var::Symbol) = first(predictmean(fitted, weights, (var,)))
-
 function krigmean(fitted::FittedKriging, weights::KrigingWeights, vars)
   d = fitted.state.data
   λ = weights.λ
   k = size(λ, 2)
-  n = length(vars)
-
-  @assert (k == n || k == 1) "invalid number of variables for Kriging model"
 
   cols = Tables.columns(values(d))
-
-  if k == n
-    @inbounds map(1:k) do j
-      sum(1:n) do p
-        λₚ = @view λ[p:k:end, j]
-        zₚ = Tables.getcolumn(cols, vars[p])
-        sum(i -> λₚ[i] ⦿ zₚ[i], eachindex(λₚ, zₚ))
-      end
-    end
-  else # k == 1
-    @inbounds map(1:n) do p
-      λₚ = @view λ[:, 1]
+  @inbounds map(1:k) do j
+    sum(1:k) do p
+      λₚ = @view λ[p:k:end, j]
       zₚ = Tables.getcolumn(cols, vars[p])
       sum(i -> λₚ[i] ⦿ zₚ[i], eachindex(λₚ, zₚ))
     end
@@ -223,10 +219,7 @@ function predictvar(fitted::FittedKriging, weights::KrigingWeights, gₒ)
   σ² = krigvar(fun, weights, RHS, gₒ)
 
   # treat numerical issues
-  σ²₊ = max.(zero(σ²), σ²)
-
-  # treat scalar case
-  length(σ²₊) == 1 ? first(σ²₊) : σ²₊
+  max.(zero(σ²), σ²)
 end
 
 krigvar(fun::Variogram, weights::KrigingWeights, RHS, gₒ) = covvar(fun, weights, RHS, gₒ)
