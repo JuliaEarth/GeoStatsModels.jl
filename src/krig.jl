@@ -141,7 +141,7 @@ function missingindices(tab)
   entries = map(1:nvar) do j
     vals = Tables.getcolumn(cols, vars[j])
     inds = findall(ismissing, vals)
-    [nvar * (i - 1) + 1 + j for i in inds]
+    [nvar * (i - 1) + j for i in inds]
   end
 
   # sort indices to improve locality
@@ -199,17 +199,21 @@ function krigmean(fitted::FittedKriging, weights::KrigingWeights, vars)
       sum(1:n) do p
         λₚ = @view λ[p:k:end, j]
         zₚ = Tables.getcolumn(cols, vars[p])
-        sum(i -> λₚ[i] * zₚ[i], eachindex(λₚ, zₚ))
+        sum(i -> λₚ[i] ⦿ zₚ[i], eachindex(λₚ, zₚ))
       end
     end
   elseif k == 1
     @inbounds map(1:n) do p
       λₚ = @view λ[:, 1]
       zₚ = Tables.getcolumn(cols, vars[p])
-      sum(i -> λₚ[i] * zₚ[i], eachindex(λₚ, zₚ))
+      sum(i -> λₚ[i] ⦿ zₚ[i], eachindex(λₚ, zₚ))
     end
   end
 end
+
+# handle missing values in linear combination
+⦿(λ, z) = λ * z
+⦿(λ, z::Missing) = 0
 
 function predictvar(fitted::FittedKriging, weights::KrigingWeights, gₒ)
   RHS = fitted.state.RHS
