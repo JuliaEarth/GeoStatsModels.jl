@@ -20,6 +20,7 @@ mutable struct KrigingState{D<:AbstractGeoTable,F,A}
   LHS::F
   RHS::A
   ncon::Int
+  miss::Vector{Int}
 end
 
 """
@@ -51,21 +52,22 @@ status(fitted::FittedKriging) = issuccess(fitted.state.LHS)
 
 function fit(model::KrigingModel, data)
   # initialize Kriging system
-  LHS, RHS, ncon = initkrig(model, domain(data))
+  LHS, RHS, ncon, miss = initkrig(model, data)
 
   # factorize LHS
   FLHS = lhsfactorize(model, LHS)
 
   # record Kriging state
-  state = KrigingState(data, FLHS, RHS, ncon)
+  state = KrigingState(data, FLHS, RHS, ncon, miss)
 
   FittedKriging(model, state)
 end
 
 # initialize Kriging system
-function initkrig(model::KrigingModel, domain)
+function initkrig(model::KrigingModel, data)
   fun = model.fun
-  dom = domain
+  dom = domain(data)
+  tab = values(data)
 
   # retrieve matrix parameters
   V, (_, nobs, nvar) = GeoStatsFunctions.matrixparams(fun, dom)
@@ -84,10 +86,16 @@ function initkrig(model::KrigingModel, domain)
   # set blocks of constraints
   lhsconstraints!(model, LHS, nvar, dom)
 
+  # find locations with missing values
+  miss = missingindices(tab)
+
+  # knock out entries with missing values
+  lhsmissings!(LHS, ncon, miss)
+
   # pre-allocate memory for RHS
   RHS = similar(LHS, nrow, nvar)
 
-  LHS, RHS, ncon
+  LHS, RHS, ncon, miss
 end
 
 # choose appropriate factorization of LHS
@@ -121,6 +129,38 @@ end
 
 # no adjustments in case of general geostatistical functions
 lhsadjustments!(LHS, fun, dom) = nothing
+
+# find locations with missing values
+function missingindices(tab)
+  cols = Tables.columns(tab)
+  vars = Tables.columnnames(cols)
+  nvar = length(vars)
+
+  # find locations with missing values and
+  # map to entries of blocks in final matrix
+  entries = map(1:nvar) do j
+    vals = Tables.getcolumn(cols, vars[j])
+    inds = findall(ismissing, vals)
+    [nvar * (i - 1) + j for i in inds]
+  end
+
+  # sort indices to improve locality
+  sort(reduce(vcat, entries))
+end
+
+# knock out entries with missing values
+function lhsmissings!(LHS, ncon, miss)
+  nrow = size(LHS, 1)
+  nfun = nrow - ncon
+  @inbounds for j in miss, i in 1:nfun
+    LHS[i, j] = 0
+  end
+  @inbounds for j in 1:nfun, i in miss
+    LHS[i, j] = 0
+  end
+
+  nothing
+end
 
 #-----------------
 # PREDICTION STEP
@@ -159,17 +199,21 @@ function krigmean(fitted::FittedKriging, weights::KrigingWeights, vars)
       sum(1:n) do p
         λₚ = @view λ[p:k:end, j]
         zₚ = Tables.getcolumn(cols, vars[p])
-        sum(i -> λₚ[i] * zₚ[i], eachindex(λₚ, zₚ))
+        sum(i -> λₚ[i] ⦿ zₚ[i], eachindex(λₚ, zₚ))
       end
     end
-  elseif k == 1
+  else # k == 1
     @inbounds map(1:n) do p
       λₚ = @view λ[:, 1]
       zₚ = Tables.getcolumn(cols, vars[p])
-      sum(i -> λₚ[i] * zₚ[i], eachindex(λₚ, zₚ))
+      sum(i -> λₚ[i] ⦿ zₚ[i], eachindex(λₚ, zₚ))
     end
   end
 end
+
+# handle missing values in linear combination
+⦿(λ, z) = λ * z
+⦿(λ, z::Missing) = 0
 
 function predictvar(fitted::FittedKriging, weights::KrigingWeights, gₒ)
   RHS = fitted.state.RHS
@@ -244,6 +288,7 @@ function weights(fitted::FittedKriging, gₒ)
   LHS = fitted.state.LHS
   RHS = fitted.state.RHS
   ncon = fitted.state.ncon
+  miss = fitted.state.miss
   dom = domain(fitted.state.data)
   fun = fitted.model.fun
 
@@ -258,6 +303,9 @@ function weights(fitted::FittedKriging, gₒ)
 
   # set blocks of constraints
   rhsconstraints!(fitted, gₒ′)
+
+  # knock out entries with missing values
+  rhsmissings!(RHS, miss)
 
   # solve Kriging system
   W = LHS \ RHS
@@ -294,6 +342,16 @@ end
 
 # no adjustments in case of general geostatistical functions
 rhsadjustments!(RHS, fun, dom) = nothing
+
+# knock out entries with missing values
+function rhsmissings!(RHS, miss)
+  nvar = size(RHS, 2)
+  @inbounds for j in 1:nvar, i in miss
+    RHS[i, j] = 0
+  end
+
+  nothing
+end
 
 # the following functions are implemented by
 # all variants of Kriging (e.g., SimpleKriging)
