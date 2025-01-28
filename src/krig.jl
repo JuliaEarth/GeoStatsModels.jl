@@ -202,7 +202,7 @@ function krigmean(fitted::FittedKriging, weights::KrigingWeights, vars)
         sum(i -> λₚ[i] ⦿ zₚ[i], eachindex(λₚ, zₚ))
       end
     end
-  elseif k == 1
+  else # k == 1
     @inbounds map(1:n) do p
       λₚ = @view λ[:, 1]
       zₚ = Tables.getcolumn(cols, vars[p])
