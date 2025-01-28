@@ -395,7 +395,7 @@
     @test all(≥(0), var.(dkdist))
   end
 
-  @testset "Single/Multiple" begin
+  @testset "Fallbacks" begin
     d = georef((; z=[1.0, 0.0, 1.0]), [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)])
     γ = GaussianVariogram()
     ok = GeoStatsModels.fit(OK(γ), d)

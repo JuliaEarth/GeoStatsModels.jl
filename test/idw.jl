@@ -23,7 +23,7 @@
     @test pred isa Composition
   end
 
-  @testset "Single/Multiple" begin
+  @testset "Fallbacks" begin
     d = georef((; z=[1.0, 0.0, 1.0]), [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)])
     idw = GeoStatsModels.fit(IDW(), d)
     pred1 = GeoStatsModels.predict(idw, :z, Point(0.0, 0.0))

@@ -34,7 +34,7 @@
     @test pred isa Composition
   end
 
-  @testset "Single/Multiple" begin
+  @testset "Fallbacks" begin
     d = georef((; z=[1.0, 0.0, 1.0]), [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)])
     nn = GeoStatsModels.fit(NN(), d)
     pred1 = GeoStatsModels.predict(nn, :z, Point(0.0, 0.0))
