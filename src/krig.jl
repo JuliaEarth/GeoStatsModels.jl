@@ -174,9 +174,13 @@ end
 
 predict(fitted::FittedKriging, var::AbstractString, gₒ) = predict(fitted, Symbol(var), gₒ)
 
+predict(fitted::FittedKriging, var::Symbol, gₒ) = predict(fitted, (var,), gₒ) |> first
+
 predict(fitted::FittedKriging, vars, gₒ) = predictmean(fitted, weights(fitted, gₒ), vars)
 
 predictprob(fitted::FittedKriging, var::AbstractString, gₒ) = predictprob(fitted, Symbol(var), gₒ)
+
+predictprob(fitted::FittedKriging, var::Symbol, gₒ) = predictprob(fitted, (var,), gₒ) |> first
 
 function predictprob(fitted::FittedKriging, vars, gₒ)
   w = weights(fitted, gₒ)
@@ -187,8 +191,6 @@ function predictprob(fitted::FittedKriging, vars, gₒ)
 end
 
 predictmean(fitted::FittedKriging, weights::KrigingWeights, vars) = krigmean(fitted, weights, vars)
-
-predictmean(fitted::FittedKriging, weights::KrigingWeights, var::Symbol) = first(predictmean(fitted, weights, (var,)))
 
 function krigmean(fitted::FittedKriging, weights::KrigingWeights, vars)
   d = fitted.state.data
@@ -217,10 +219,7 @@ function predictvar(fitted::FittedKriging, weights::KrigingWeights, gₒ)
   σ² = krigvar(fun, weights, RHS, gₒ)
 
   # treat numerical issues
-  σ²₊ = max.(zero(σ²), σ²)
-
-  # treat scalar case
-  length(σ²₊) == 1 ? first(σ²₊) : σ²₊
+  max.(zero(σ²), σ²)
 end
 
 krigvar(fun::Variogram, weights::KrigingWeights, RHS, gₒ) = covvar(fun, weights, RHS, gₒ)
