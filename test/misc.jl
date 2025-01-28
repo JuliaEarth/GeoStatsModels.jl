@@ -14,21 +14,6 @@
   vpred = GeoStatsModels.fitpredict(IDW(), vgtb, pset, neighbors=false)
   @test vpred == pred
 
-  # fitpredict with multiple variables and Kriging
-  gtb = georef((; a=[1.0, 0.0, 0.0], b=[0.0, 1.0, 0.0], c=[0.0, 0.0, 1.0]), [(25.0, 25.0), (50.0, 75.0), (75.0, 50.0)])
-  grid = CartesianGrid((100, 100), (0.5, 0.5), (1.0, 1.0))
-  pred = GeoStatsModels.fitpredict(Kriging(SphericalVariogram(range=35.0)), gtb, grid, maxneighbors=3)
-  inds = LinearIndices(size(grid))
-  @test isapprox(pred.a[inds[25, 25]], 1.0, atol=1e-3)
-  @test isapprox(pred.a[inds[50, 75]], 0.0, atol=1e-3)
-  @test isapprox(pred.a[inds[75, 50]], 0.0, atol=1e-3)
-  @test isapprox(pred.b[inds[25, 25]], 0.0, atol=1e-3)
-  @test isapprox(pred.b[inds[50, 75]], 1.0, atol=1e-3)
-  @test isapprox(pred.b[inds[75, 50]], 0.0, atol=1e-3)
-  @test isapprox(pred.c[inds[25, 25]], 0.0, atol=1e-3)
-  @test isapprox(pred.c[inds[50, 75]], 0.0, atol=1e-3)
-  @test isapprox(pred.c[inds[75, 50]], 1.0, atol=1e-3)
-
   # fitpredict with multiple variables and CoKriging
   gtb = georef((; a=[1.0, 0.0, 0.0], b=[0.0, 1.0, 0.0], c=[0.0, 0.0, 1.0]), [(25.0, 25.0), (50.0, 75.0), (75.0, 50.0)])
   grid = CartesianGrid((100, 100), (0.5, 0.5), (1.0, 1.0))

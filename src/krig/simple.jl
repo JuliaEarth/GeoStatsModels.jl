@@ -37,23 +37,11 @@ function krigmean(fitted::FittedKriging{<:SimpleKriging}, weights::KrigingWeight
   μ = fitted.model.mean
   λ = weights.λ
   k = size(λ, 2)
-  n = length(vars)
-
-  @assert (k == n || k == 1) "invalid number of variables for Kriging model"
 
   cols = Tables.columns(values(d))
-
-  if k == n
-    @inbounds map(1:k) do j
-      sum(1:n) do p
-        λₚ = @view λ[p:k:end, j]
-        zₚ = Tables.getcolumn(cols, vars[p])
-        μ[p] + sum(i -> λₚ[i] ⦿ (zₚ[i] - μ[p]), eachindex(λₚ, zₚ))
-      end
-    end
-  else # k == 1
-    @inbounds map(1:n) do p
-      λₚ = @view λ[:, 1]
+  @inbounds map(1:k) do j
+    sum(1:k) do p
+      λₚ = @view λ[p:k:end, j]
       zₚ = Tables.getcolumn(cols, vars[p])
       μ[p] + sum(i -> λₚ[i] ⦿ (zₚ[i] - μ[p]), eachindex(λₚ, zₚ))
     end
