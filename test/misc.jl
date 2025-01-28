@@ -3,10 +3,9 @@
 
   # fitpredict with IDW
   pset = PointSet(rand(rng, Point, 3))
-  gtb = georef((a=[1, 2, 3], b=[4, 5, 6]), pset)
+  gtb = georef((z=[1, 2, 3],), pset)
   pred = GeoStatsModels.fitpredict(IDW(), gtb, pset, neighbors=false)
-  @test pred.a == gtb.a
-  @test pred.b == gtb.b
+  @test pred.z == gtb.z
   @test pred.geometry == gtb.geometry
 
   # also works with views

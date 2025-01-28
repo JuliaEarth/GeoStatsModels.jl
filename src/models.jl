@@ -33,7 +33,13 @@ Predict one or multiple variables `vars` at geometry `gₒ` with
 given geostatistical `model`.
 """
 predict(model::FittedGeoStatsModel, var::AbstractString, gₒ) = predict(model, Symbol(var), gₒ)
-predict(model::FittedGeoStatsModel, vars, gₒ) = [predict(model, var, gₒ) for var in vars]
+function predict(model::FittedGeoStatsModel, vars, gₒ)
+  if length(vars) > 1
+    throw(ArgumentError("cannot use univariate model to predict multiple variables"))
+  else
+    [predict(model, first(vars), gₒ)]
+  end
+end
 
 """
     predictprob(model, vars, gₒ)
@@ -42,7 +48,13 @@ Predict distribution of one or multiple variables `vars` at
 geometry `gₒ` with given geostatistical `model`.
 """
 predictprob(model::FittedGeoStatsModel, var::AbstractString, gₒ) = predictprob(model, Symbol(var), gₒ)
-predictprob(model::FittedGeoStatsModel, vars, gₒ) = [predictprob(model, var, gₒ) for var in vars]
+function predictprob(model::FittedGeoStatsModel, vars, gₒ)
+  if length(vars) > 1
+    throw(ArgumentError("cannot use univariate model to predict multiple variables"))
+  else
+    [predictprob(model, first(vars), gₒ)]
+  end
+end
 
 """
     status(fitted)

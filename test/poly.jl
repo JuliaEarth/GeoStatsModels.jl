@@ -36,12 +36,11 @@
 
     # correct schema
     rng = StableRNG(42)
-    d = georef((a=rand(rng, 10), b=rand(rng, 10)), rand(rng, Point, 10))
+    d = georef((z=rand(rng, 10),), rand(rng, Point, 10))
     d̄ = fitpredict(Polynomial(), d)
     t̄ = values(d̄)
-    @test propertynames(t̄) == (:a, :b)
-    @test eltype(t̄.a) == Float64
-    @test eltype(t̄.b) == Float64
+    @test propertynames(t̄) == (:z,)
+    @test eltype(t̄.z) == Float64
 
     # latlon coordinates
     d = georef((; z=[1, 2, 3]), Point.([LatLon(0, 0), LatLon(0, 1), LatLon(1, 0)]))
@@ -68,7 +67,7 @@
     @test pred isa Composition
   end
 
-  @testset "Single/Multiple" begin
+  @testset "Fallbacks" begin
     d = georef((; z=[1.0, 0.0, 1.0]), [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)])
     poly = GeoStatsModels.fit(Polynomial(), d)
     pred1 = GeoStatsModels.predict(poly, :z, Point(0.0, 0.0))
