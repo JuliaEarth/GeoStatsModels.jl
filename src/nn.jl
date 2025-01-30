@@ -5,7 +5,7 @@
 """
     NN(distance=Euclidean())
 
-A model that assigns the value of the nearest observation.
+A model that assigns the value of the nearest neighbor.
 """
 struct NN{D} <: GeoStatsModel
   distance::D
