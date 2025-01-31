@@ -87,7 +87,9 @@ function initkrig(model::KrigingModel, data)
   GeoStatsFunctions.pairwise!(LHS, fun, dom)
 
   # adjustments for numerical stability
-  lhsadjustments!(LHS, fun, dom)
+  if isstationary(fun) && !isbanded(fun)
+    lhsbanded!(LHS, fun, dom)
+  end
 
   # set blocks of constraints
   lhsconstraints!(model, LHS, nvar, dom)
@@ -105,19 +107,18 @@ function initkrig(model::KrigingModel, data)
 end
 
 # choose appropriate factorization of LHS
-lhsfactorize(model::GeoStatsModel, LHS) = lhsfactorize(model.fun, LHS)
+function lhsfactorize(model::GeoStatsModel, LHS)
+  if issymmetric(model.fun)
+    # enforce Bunch-Kaufmann factorization
+    bunchkaufman!(Symmetric(LHS), check=false)
+  else
+    # fallback to LU factorization
+    lu!(LHS, check=false)
+  end
+end
 
-# Bunch-Kaufman factorization in case of dense symmetric matrices
-lhsfactorize(::Variogram, LHS) = bunchkaufman!(Symmetric(LHS), check=false)
-
-# LU factorization in case of general square matrices
-lhsfactorize(::GeoStatsFunction, LHS) = lu!(LHS, check=false)
-
-# convert variograms into covariances for better numerical stability
-function lhsadjustments!(LHS, fun::Variogram, dom)
-  # adjustments only possible in stationary case
-  isstationary(fun) || return nothing
-
+# convert LHS into banded matrix
+function lhsbanded!(LHS, fun, dom)
   # retrieve total sill
   S = ustrip.(sill(fun))
 
@@ -132,9 +133,6 @@ function lhsadjustments!(LHS, fun::Variogram, dom)
 
   nothing
 end
-
-# no adjustments in case of general geostatistical functions
-lhsadjustments!(LHS, fun, dom) = nothing
 
 # find locations with missing values
 function missingindices(tab)
@@ -222,9 +220,18 @@ function predictvar(fitted::FittedKriging, weights::KrigingWeights, gₒ)
   max.(zero(σ²), σ²)
 end
 
-krigvar(fun::Variogram, weights::KrigingWeights, RHS, gₒ) = covvar(fun, weights, RHS, gₒ)
+function krigvar(fun::GeoStatsFunction, weights::KrigingWeights, RHS, gₒ)
+  # auxiliary variables
+  k = size(weights.λ, 2)
 
-krigvar(fun::Covariance, weights::KrigingWeights, RHS, gₒ) = covvar(fun, weights, RHS, gₒ)
+  # compute variance contributions
+  Cλ, Cν = wmul(weights, RHS)
+
+  # compute cov(0) considering change of support
+  Cₒ = ustrip.(covzero(fun, gₒ)) * I(k)
+
+  diag(Cₒ) - diag(Cλ) - diag(Cν)
+end
 
 function krigvar(t::Transiogram, weights::KrigingWeights, RHS, gₒ)
   # auxiliary variables
@@ -248,22 +255,13 @@ function krigvar(t::Transiogram, weights::KrigingWeights, RHS, gₒ)
   diag(Cₒ) - diag(Cλ) - diag(Cν)
 end
 
-function covvar(fun::GeoStatsFunction, weights::KrigingWeights, RHS, gₒ)
-  # auxiliary variables
-  k = size(weights.λ, 2)
-
-  # compute variance contributions
-  Cλ, Cν = wmul(weights, RHS)
-
-  # compute cov(0) considering change of support
-  Cₒ = ustrip.(covzero(fun, gₒ)) * I(k)
-
-  diag(Cₒ) - diag(Cλ) - diag(Cν)
+function covzero(fun::GeoStatsFunction, gₒ)
+  if isstationary(fun) && !isbanded(fun)
+    sill(fun) - fun(gₒ, gₒ)
+  else
+    fun(gₒ, gₒ)
+  end
 end
-
-covzero(γ::Variogram, gₒ) = isstationary(γ) ? sill(γ) - γ(gₒ, gₒ) : γ(gₒ, gₒ)
-
-covzero(cov::Covariance, gₒ) = cov(gₒ, gₒ)
 
 # compute RHS' * [λ; ν] efficiently
 function wmul(weights::KrigingWeights, RHS)
@@ -292,7 +290,9 @@ function weights(fitted::FittedKriging, gₒ)
   GeoStatsFunctions.pairwise!(RHS, fun, dom, [gₒ′])
 
   # adjustments for numerical stability
-  rhsadjustments!(RHS, fun, dom)
+  if isstationary(fun) && !isbanded(fun)
+    rhsbanded!(RHS, fun, dom)
+  end
 
   # set blocks of constraints
   rhsconstraints!(fitted, gₒ′)
@@ -313,11 +313,8 @@ function weights(fitted::FittedKriging, gₒ)
   KrigingWeights(λ, ν)
 end
 
-# convert variograms into covariances for better numerical stability
-function rhsadjustments!(RHS, fun::Variogram, dom)
-  # adjustments only possible in stationary case
-  isstationary(fun) || return nothing
-
+# convert RHS into banded matrix
+function rhsbanded!(RHS, fun, dom)
   # retrieve total sill
   S = ustrip.(sill(fun))
 
@@ -332,9 +329,6 @@ function rhsadjustments!(RHS, fun::Variogram, dom)
 
   nothing
 end
-
-# no adjustments in case of general geostatistical functions
-rhsadjustments!(RHS, fun, dom) = nothing
 
 # knock out entries with missing values
 function rhsmissings!(RHS, miss)
