@@ -361,7 +361,7 @@
     pset = [Point(25.0, 25.0), Point(50.0, 75.0), Point(75.0, 50.0)]
     data = georef((; a=[1.0, 0.0, 0.0], b=[0.0, 1.0, 0.0], c=[0.0, 0.0, 1.0]), pset)
 
-    t = MatrixExponentialTransiogram((35.0, 35.0, 35.0), (0.5, 0.3, 0.2))
+    t = MatrixExponentialTransiogram(lengths=(35.0, 35.0, 35.0), proportions=(0.5, 0.3, 0.2))
     sk = GeoStatsModels.fit(SK(t, [0.0, 0.0, 0.0]), data)
     ok = GeoStatsModels.fit(OK(t), data)
     uk = GeoStatsModels.fit(UK(t, 1, 2), data)
