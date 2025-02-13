@@ -65,12 +65,12 @@ Return the status of the `fitted` geostatistical model.
 function status end
 
 """
-    fitpredict(model, geotable, domain; [parameters])
+    fitpredict(model, geotable, domain; [options])
 
 Fit geostatistical `model` to `geotable` and predict all
-variables on `domain` using a set of optional parameters.
+variables on `domain` using a set of `options`.
 
-## Parameters
+## Options
 
 * `path`         - Path over the domain (default to `LinearPath()`)
 * `point`        - Perform interpolation on point support (default to `true`)
