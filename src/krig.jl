@@ -71,7 +71,7 @@ function initkrig(model::KrigingModel, data)
 
   # retrieve matrix parameters
   V, (_, nobs, nvar) = GeoStatsFunctions.matrixparams(fun, dom)
-  ncon = nconstraints(model, nvar)
+  ncon = nconstraints(model)
   nrow = nobs * nvar + ncon
 
   # make sure data is compatible with model
@@ -92,7 +92,7 @@ function initkrig(model::KrigingModel, data)
   end
 
   # set blocks of constraints
-  lhsconstraints!(model, LHS, nvar, dom)
+  lhsconstraints!(model, LHS, dom)
 
   # find locations with missing values
   miss = missingindices(tab)

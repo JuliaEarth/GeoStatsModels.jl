@@ -11,11 +11,14 @@ struct OrdinaryKriging{F<:GeoStatsFunction} <: KrigingModel
   fun::F
 end
 
-nconstraints(::OrdinaryKriging, nvar::Int) = nvar
+nconstraints(model::OrdinaryKriging) = nvariates(model.fun)
 
-function lhsconstraints!(model::OrdinaryKriging, LHS::AbstractMatrix, nvar::Int, domain)
+function lhsconstraints!(model::OrdinaryKriging, LHS::AbstractMatrix, domain)
+  # number of variables
+  nvar = nvariates(model.fun)
+
   # number of constraints
-  ncon = nconstraints(model, nvar)
+  ncon = nconstraints(model)
 
   # retrieve size of LHS
   nrow, ncol = size(LHS)

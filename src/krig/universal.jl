@@ -51,16 +51,19 @@ function exponents(deg::Int, dim::Int)
   eachcol(pow[:, inds])
 end
 
-nconstraints(model::UniversalKriging, nvar::Int) = nvar * length(model.drifts)
+nconstraints(model::UniversalKriging) = nvariates(model.fun) * length(model.drifts)
 
-function lhsconstraints!(model::UniversalKriging, LHS::AbstractMatrix, nvar::Int, domain)
+function lhsconstraints!(model::UniversalKriging, LHS::AbstractMatrix, domain)
   drifts = model.drifts
+
+  # number of variables
+  nvar = nvariates(model.fun)
+
+  # number of constraints
+  ncon = nconstraints(model)
 
   # retrieve size of LHS
   nrow, ncol = size(LHS)
-
-  # number of constraints
-  ncon = nconstraints(model, nvar)
 
   # index of first constraint
   ind = nrow - ncon + 1
