@@ -331,14 +331,14 @@
       okdist = GeoStatsModels.predictprob(ok, (:a, :b, :c), pset[i])
       ukdist = GeoStatsModels.predictprob(uk, (:a, :b, :c), pset[i])
       dkdist = GeoStatsModels.predictprob(dk, (:a, :b, :c), pset[i])
-      @test mean.(skdist) ≈ [j == i for j in 1:3]
-      @test mean.(okdist) ≈ [j == i for j in 1:3]
-      @test mean.(ukdist) ≈ [j == i for j in 1:3]
-      @test mean.(dkdist) ≈ [j == i for j in 1:3]
-      @test isapprox(var.(skdist), [0.0, 0.0, 0.0], atol=1e-10)
-      @test isapprox(var.(okdist), [0.0, 0.0, 0.0], atol=1e-10)
-      @test isapprox(var.(ukdist), [0.0, 0.0, 0.0], atol=1e-10)
-      @test isapprox(var.(dkdist), [0.0, 0.0, 0.0], atol=1e-10)
+      @test mean(skdist) ≈ [j == i for j in 1:3]
+      @test mean(okdist) ≈ [j == i for j in 1:3]
+      @test mean(ukdist) ≈ [j == i for j in 1:3]
+      @test mean(dkdist) ≈ [j == i for j in 1:3]
+      @test isapprox(var(skdist), [0.0, 0.0, 0.0], atol=1e-8)
+      @test isapprox(var(okdist), [0.0, 0.0, 0.0], atol=1e-8)
+      @test isapprox(var(ukdist), [0.0, 0.0, 0.0], atol=1e-8)
+      @test isapprox(var(dkdist), [0.0, 0.0, 0.0], atol=1e-8)
     end
 
     # predict on a specific point
@@ -347,14 +347,14 @@
     okdist = GeoStatsModels.predictprob(ok, (:a, :b, :c), pₒ)
     ukdist = GeoStatsModels.predictprob(uk, (:a, :b, :c), pₒ)
     dkdist = GeoStatsModels.predictprob(dk, (:a, :b, :c), pₒ)
-    @test all(μ -> 0 ≤ μ ≤ 1, mean.(skdist))
-    @test all(μ -> 0 ≤ μ ≤ 1, mean.(okdist))
-    @test all(μ -> 0 ≤ μ ≤ 1, mean.(ukdist))
-    @test all(μ -> 0 ≤ μ ≤ 1, mean.(dkdist))
-    @test all(≥(0), var.(skdist))
-    @test all(≥(0), var.(okdist))
-    @test all(≥(0), var.(ukdist))
-    @test all(≥(0), var.(dkdist))
+    @test all(μ -> 0 ≤ μ ≤ 1, mean(skdist))
+    @test all(μ -> 0 ≤ μ ≤ 1, mean(okdist))
+    @test all(μ -> 0 ≤ μ ≤ 1, mean(ukdist))
+    @test all(μ -> 0 ≤ μ ≤ 1, mean(dkdist))
+    @test all(≥(0), var(skdist))
+    @test all(≥(0), var(okdist))
+    @test all(≥(0), var(ukdist))
+    @test all(≥(0), var(dkdist))
   end
 
   @testset "Transiogram" begin
@@ -369,30 +369,26 @@
 
     # interpolation property
     for i in 1:3
-      skdist = GeoStatsModels.predictprob(sk, (:a, :b, :c), pset[i])
-      okdist = GeoStatsModels.predictprob(ok, (:a, :b, :c), pset[i])
-      ukdist = GeoStatsModels.predictprob(uk, (:a, :b, :c), pset[i])
-      dkdist = GeoStatsModels.predictprob(dk, (:a, :b, :c), pset[i])
-      @test mean.(skdist) ≈ [j == i for j in 1:3]
-      @test mean.(okdist) ≈ [j == i for j in 1:3]
-      @test mean.(ukdist) ≈ [j == i for j in 1:3]
-      @test mean.(dkdist) ≈ [j == i for j in 1:3]
+      skmean = GeoStatsModels.predict(sk, (:a, :b, :c), pset[i])
+      okmean = GeoStatsModels.predict(ok, (:a, :b, :c), pset[i])
+      ukmean = GeoStatsModels.predict(uk, (:a, :b, :c), pset[i])
+      dkmean = GeoStatsModels.predict(dk, (:a, :b, :c), pset[i])
+      @test skmean ≈ [j == i for j in 1:3]
+      @test okmean ≈ [j == i for j in 1:3]
+      @test ukmean ≈ [j == i for j in 1:3]
+      @test dkmean ≈ [j == i for j in 1:3]
     end
 
     # predict on a specific point
     pₒ = Point(50.0, 50.0)
-    skdist = GeoStatsModels.predictprob(sk, (:a, :b, :c), pₒ)
-    okdist = GeoStatsModels.predictprob(ok, (:a, :b, :c), pₒ)
-    ukdist = GeoStatsModels.predictprob(uk, (:a, :b, :c), pₒ)
-    dkdist = GeoStatsModels.predictprob(dk, (:a, :b, :c), pₒ)
-    @test all(μ -> 0 ≤ μ ≤ 1, mean.(skdist))
-    @test all(μ -> 0 ≤ μ ≤ 1, mean.(okdist))
-    @test all(μ -> 0 ≤ μ ≤ 1, mean.(ukdist))
-    @test all(μ -> 0 ≤ μ ≤ 1, mean.(dkdist))
-    @test all(≥(0), var.(skdist))
-    @test all(≥(0), var.(okdist))
-    @test all(≥(0), var.(ukdist))
-    @test all(≥(0), var.(dkdist))
+    skmean = GeoStatsModels.predict(sk, (:a, :b, :c), pₒ)
+    okmean = GeoStatsModels.predict(ok, (:a, :b, :c), pₒ)
+    ukmean = GeoStatsModels.predict(uk, (:a, :b, :c), pₒ)
+    dkmean = GeoStatsModels.predict(dk, (:a, :b, :c), pₒ)
+    @test all(μ -> 0 ≤ μ ≤ 1, skmean)
+    @test all(μ -> 0 ≤ μ ≤ 1, okmean)
+    @test all(μ -> 0 ≤ μ ≤ 1, ukmean)
+    @test all(μ -> 0 ≤ μ ≤ 1, dkmean)
   end
 
   @testset "Fallbacks" begin

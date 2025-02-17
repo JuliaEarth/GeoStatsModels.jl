@@ -178,14 +178,20 @@ predict(fitted::FittedKriging, vars, gₒ) = predictmean(fitted, weights(fitted,
 
 predictprob(fitted::FittedKriging, var::AbstractString, gₒ) = predictprob(fitted, Symbol(var), gₒ)
 
-predictprob(fitted::FittedKriging, var::Symbol, gₒ) = predictprob(fitted, (var,), gₒ) |> first
+function predictprob(fitted::FittedKriging, var::Symbol, gₒ)
+  w = weights(fitted, gₒ)
+  μ = predictmean(fitted, w, (var,)) |> first
+  σ² = predictvar(fitted, w, gₒ) |> first
+  # https://github.com/JuliaStats/Distributions.jl/issues/1413
+  Normal(ustrip.(μ), √σ²)
+end
 
 function predictprob(fitted::FittedKriging, vars, gₒ)
   w = weights(fitted, gₒ)
   μ = predictmean(fitted, w, vars)
-  σ² = predictvar(fitted, w, gₒ)
+  Σ = predictvar(fitted, w, gₒ)
   # https://github.com/JuliaStats/Distributions.jl/issues/1413
-  @. Normal(ustrip(μ), √σ²)
+  MvNormal(ustrip.(μ), Σ)
 end
 
 predictmean(fitted::FittedKriging, weights::KrigingWeights, vars) = krigmean(fitted, weights, vars)
@@ -213,11 +219,12 @@ function predictvar(fitted::FittedKriging, weights::KrigingWeights, gₒ)
   RHS = fitted.state.RHS
   fun = fitted.model.fun
 
-  # variance formula for given function
-  σ² = krigvar(fun, weights, RHS, gₒ)
+  # covariance formula for given function
+  Σ = krigvar(fun, weights, RHS, gₒ)
 
   # treat numerical issues
-  max.(zero(σ²), σ²)
+  ϵ = eltype(Σ)(1e-10)
+  Symmetric(Σ + ϵ * I)
 end
 
 function krigvar(fun::GeoStatsFunction, weights::KrigingWeights, RHS, gₒ)
@@ -230,7 +237,7 @@ function krigvar(fun::GeoStatsFunction, weights::KrigingWeights, RHS, gₒ)
   # compute cov(0) considering change of support
   Cₒ = ustrip.(covzero(fun, gₒ)) * I(k)
 
-  diag(Cₒ) - diag(Cλ) - diag(Cν)
+  Cₒ - Cλ - Cν
 end
 
 function krigvar(t::Transiogram, weights::KrigingWeights, RHS, gₒ)
@@ -252,7 +259,7 @@ function krigvar(t::Transiogram, weights::KrigingWeights, RHS, gₒ)
   Tₒ = t(gₒ, gₒ)
   Cₒ = @inbounds [p[i] * (Tₒ[i, j] - p[j]) for i in 1:k, j in 1:k]
 
-  diag(Cₒ) - diag(Cλ) - diag(Cν)
+  Cₒ - Cλ - Cν
 end
 
 function covzero(fun::GeoStatsFunction, gₒ)

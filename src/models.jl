@@ -133,7 +133,7 @@ function fitpredictneigh(model, gtb, dom, path, point, prob, minneighbors, maxne
   inds = traverse(dom, path)
 
   # prediction function
-  predfun = prob ? predictprob : predict
+  predfun = prob ? _marginals ∘ predictprob : predict
 
   # predict variables
   cols = Tables.columns(values(gtb))
@@ -177,7 +177,7 @@ function fitpredictfull(model, gtb, dom, path, point, prob)
   inds = traverse(dom, path)
 
   # prediction function
-  predfun = prob ? predictprob : predict
+  predfun = prob ? _marginals ∘ predictprob : predict
 
   # fit model to data
   fmodel = fit(model, gtb)
@@ -196,6 +196,9 @@ function fitpredictfull(model, gtb, dom, path, point, prob)
 
   georef(predtab, dom)
 end
+
+_marginals(dist::UnivariateDistribution) = (dist,)
+_marginals(dist::MvNormal) = Normal.(mean(dist), var(dist))
 
 # ----------------
 # IMPLEMENTATIONS
