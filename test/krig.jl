@@ -397,8 +397,14 @@
     ok = GeoStatsModels.fit(OK(γ), d)
     pred1 = GeoStatsModels.predict(ok, :z, Point(0.0, 0.0))
     pred2 = GeoStatsModels.predict(ok, "z", Point(0.0, 0.0))
-    pred3 = GeoStatsModels.predict(ok, [:z], Point(0.0, 0.0))
+    pred3 = GeoStatsModels.predict(ok, (:z,), Point(0.0, 0.0))
+    pred4 = GeoStatsModels.predictprob(ok, :z, Point(0.0, 0.0))
+    pred5 = GeoStatsModels.predictprob(ok, "z", Point(0.0, 0.0))
+    pred6 = GeoStatsModels.predictprob(ok, (:z,), Point(0.0, 0.0))
     @test pred1 == pred2
     @test pred1 == pred3[1]
+    @test pred4 isa Normal
+    @test pred5 isa Normal
+    @test pred6 isa MvNormal
   end
 end

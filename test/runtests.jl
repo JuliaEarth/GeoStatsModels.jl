@@ -6,6 +6,7 @@ using GeoStatsFunctions
 using CoDa
 using Unitful
 using Distances
+using Distributions
 using LinearAlgebra
 using Statistics
 using Test, StableRNGs

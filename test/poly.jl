@@ -72,7 +72,7 @@
     poly = GeoStatsModels.fit(Polynomial(), d)
     pred1 = GeoStatsModels.predict(poly, :z, Point(0.0, 0.0))
     pred2 = GeoStatsModels.predict(poly, "z", Point(0.0, 0.0))
-    pred3 = GeoStatsModels.predict(poly, [:z], Point(0.0, 0.0))
+    pred3 = GeoStatsModels.predict(poly, (:z,), Point(0.0, 0.0))
     @test pred1 == pred2
     @test pred1 == pred3[1]
   end

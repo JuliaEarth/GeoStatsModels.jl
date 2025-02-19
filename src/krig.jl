@@ -172,7 +172,7 @@ end
 
 predict(fitted::FittedKriging, var::AbstractString, gₒ) = predict(fitted, Symbol(var), gₒ)
 
-predict(fitted::FittedKriging, var::Symbol, gₒ) = predict(fitted, (var,), gₒ) |> first
+predict(fitted::FittedKriging, var::Symbol, gₒ) = predictmean(fitted, weights(fitted, gₒ), (var,)) |> first
 
 predict(fitted::FittedKriging, vars, gₒ) = predictmean(fitted, weights(fitted, gₒ), vars)
 
@@ -193,6 +193,10 @@ function predictprob(fitted::FittedKriging, vars, gₒ)
   # https://github.com/JuliaStats/Distributions.jl/issues/1413
   MvNormal(ustrip.(μ), Σ)
 end
+
+# ----------
+# INTERNALS
+# ----------
 
 predictmean(fitted::FittedKriging, weights::KrigingWeights, vars) = krigmean(fitted, weights, vars)
 

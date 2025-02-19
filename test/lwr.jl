@@ -28,7 +28,7 @@
     lwr = GeoStatsModels.fit(LWR(), d)
     pred1 = GeoStatsModels.predict(lwr, :z, Point(0.0, 0.0))
     pred2 = GeoStatsModels.predict(lwr, "z", Point(0.0, 0.0))
-    pred3 = GeoStatsModels.predict(lwr, [:z], Point(0.0, 0.0))
+    pred3 = GeoStatsModels.predict(lwr, (:z,), Point(0.0, 0.0))
     @test pred1 == pred2
     @test pred1 == pred3[1]
   end
