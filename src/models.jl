@@ -52,7 +52,7 @@ function predictprob(model::FittedGeoStatsModel, vars, gₒ)
   if length(vars) > 1
     throw(ArgumentError("cannot use univariate model to predict multiple variables"))
   else
-    [predictprob(model, first(vars), gₒ)]
+    product_distribution([predictprob(model, first(vars), gₒ)])
   end
 end
 

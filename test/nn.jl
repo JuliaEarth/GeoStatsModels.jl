@@ -40,6 +40,15 @@
     pred1 = GeoStatsModels.predict(nn, :z, Point(0.0, 0.0))
     pred2 = GeoStatsModels.predict(nn, "z", Point(0.0, 0.0))
     pred3 = GeoStatsModels.predict(nn, (:z,), Point(0.0, 0.0))
+    pred4 = GeoStatsModels.predictprob(nn, :z, Point(0.0, 0.0))
+    pred5 = GeoStatsModels.predictprob(nn, "z", Point(0.0, 0.0))
+    pred6 = GeoStatsModels.predictprob(nn, (:z,), Point(0.0, 0.0))
+    @test pred1 isa Number
+    @test pred2 isa Number
+    @test pred3 isa AbstractVector
+    @test pred4 isa Dirac
+    @test pred5 isa Dirac
+    @test pred6 isa Product
     @test pred1 == pred2
     @test pred1 == pred3[1]
   end
