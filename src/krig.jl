@@ -44,7 +44,10 @@ struct FittedKriging{M<:KrigingModel,S<:KrigingState} <: FittedGeoStatsModel
   state::S
 end
 
-status(fitted::FittedKriging) = issuccess(fitted.state.LHS)
+status(fitted::FittedKriging) = _status(fitted.state.LHS)
+
+_status(LHS) = issuccess(LHS)
+_status(LHS::SVD) = true
 
 #--------------
 # FITTING STEP
@@ -107,9 +110,19 @@ function initkrig(model::KrigingModel, data)
 end
 
 # choose appropriate factorization of LHS
-function lhsfactorize(model::GeoStatsModel, LHS)
-  if issymmetric(model.fun)
-    # enforce Bunch-Kaufmann factorization
+lhsfactorize(model::GeoStatsModel, LHS) = _lhsfactorize(model.fun, LHS)
+
+# enforce Bunch-Kaufman factorization for symmetric functions
+_lhsfactorize(::Variogram, LHS) = bunchkaufman!(Symmetric(LHS), check=false)
+_lhsfactorize(::Covariance, LHS) = bunchkaufman!(Symmetric(LHS), check=false)
+
+# enforce SVD factorization for rank-deficient matrices
+_lhsfactorize(::Transiogram, LHS) = svd!(LHS)
+
+# choose appropriate factorization for other functions
+function _lhsfactorize(fun::GeoStatsFunction, LHS)
+  if issymmetric(fun)
+    # enforce Bunch-Kaufman factorization
     bunchkaufman!(Symmetric(LHS), check=false)
   else
     # fallback to LU factorization
@@ -240,28 +253,6 @@ function krigvar(fun::GeoStatsFunction, weights::KrigingWeights, RHS, gₒ)
 
   # compute cov(0) considering change of support
   Cₒ = ustrip.(covzero(fun, gₒ)) * I(k)
-
-  Cₒ - Cλ - Cν
-end
-
-function krigvar(t::Transiogram, weights::KrigingWeights, RHS, gₒ)
-  # auxiliary variables
-  n, k = size(weights.λ)
-  p = proportions(t)
-
-  # convert transiograms to covariances
-  COV = deepcopy(RHS)
-  @inbounds for j in 1:k, i in 1:n
-    # Eq. 12 of Carle & Fogg 1996
-    COV[i, j] = p[mod1(i, k)] * (COV[i, j] - p[j])
-  end
-
-  # compute variance contributions
-  Cλ, Cν = wmul(weights, COV)
-
-  # compute cov(0) considering change of support
-  Tₒ = t(gₒ, gₒ)
-  Cₒ = @inbounds [p[i] * (Tₒ[i, j] - p[j]) for i in 1:k, j in 1:k]
 
   Cₒ - Cλ - Cν
 end
