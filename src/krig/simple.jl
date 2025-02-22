@@ -40,10 +40,10 @@ function krigmean(fitted::FittedKriging{<:SimpleKriging}, weights::KrigingWeight
 
   cols = Tables.columns(values(d))
   @inbounds map(1:k) do j
-    sum(1:k) do p
+    μ[j] + sum(1:k) do p
       λₚ = @view λ[p:k:end, j]
       zₚ = Tables.getcolumn(cols, vars[p])
-      μ[p] + sum(i -> λₚ[i] ⦿ (zₚ[i] - μ[p]), eachindex(λₚ, zₚ))
+      sum(i -> λₚ[i] ⦿ (zₚ[i] - μ[p]), eachindex(λₚ, zₚ))
     end
   end
 end

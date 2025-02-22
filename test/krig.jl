@@ -355,6 +355,13 @@
     @test all(≥(0), var(okdist))
     @test all(≥(0), var(ukdist))
     @test all(≥(0), var(dkdist))
+
+    # simple CoKriging with non-zero mean
+    sk = GeoStatsModels.fit(SK(γ, [0.7, 0.2, 0.1]), data)
+    for i in 1:3
+      pred = GeoStatsModels.predict(sk, (:a, :b, :c), pset[i])
+      @test pred ≈ [j == i for j in 1:3]
+    end
   end
 
   @testset "Transiogram" begin
