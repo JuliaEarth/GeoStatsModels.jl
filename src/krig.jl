@@ -73,7 +73,8 @@ function initkrig(model::KrigingModel, data)
   tab = values(data)
 
   # retrieve matrix parameters
-  V, (_, nobs, nvar) = GeoStatsFunctions.matrixparams(fun, dom)
+  nobs = nelements(dom)
+  nvar = nvariates(fun)
   ncon = nconstraints(model)
   nrow = nobs * nvar + ncon
 
@@ -84,6 +85,8 @@ function initkrig(model::KrigingModel, data)
   end
 
   # pre-allocate memory for LHS
+  F = fun(dom[1], dom[1])
+  V = eltype(ustrip.(F))
   LHS = Matrix{V}(undef, nrow, nrow)
 
   # set main block with pairwise evaluation
