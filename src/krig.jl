@@ -10,7 +10,7 @@ A Kriging model (e.g. Simple Kriging, Ordinary Kriging).
 abstract type KrigingModel <: GeoStatsModel end
 
 """
-    KrigingState(data, LHS, RHS, FHS, ncon, miss)
+    KrigingState(data, LHS, RHS, FHS, nfun, miss)
 
 A Kriging state stores information needed
 to perform estimation at any given geometry.
@@ -20,7 +20,7 @@ mutable struct KrigingState{D<:AbstractGeoTable,L,R,F}
   LHS::L
   RHS::R
   FHS::F
-  ncon::Int
+  nfun::Int
   miss::Vector{Int}
 end
 
@@ -62,15 +62,41 @@ function fit(model::KrigingModel, data)
   LHS, RHS = prealloc(model, data)
 
   # set LHS of Kriging system
-  ncon, miss = setlhs!(model, LHS, data)
+  nfun, miss = setlhs!(model, LHS, data)
 
   # factorize LHS
   FHS = lhsfactorize(model, LHS)
 
   # record Kriging state
-  state = KrigingState(data, LHS, RHS, FHS, ncon, miss)
+  state = KrigingState(data, LHS, RHS, FHS, nfun, miss)
 
   FittedKriging(model, state)
+end
+
+function fit!(fitted::FittedKriging, data)
+  model = fitted.model
+  LHS = fitted.state.LHS
+  FHS = fitted.state.FHS
+  miss = fitted.state.miss
+
+  # check compatibility of data size
+  checkdatasize(fitted, data)
+
+  # check compatibility of model and data
+  checkcompat(model, data)
+
+  # set LHS of Kriging system
+  nfun, miss = setlhs!(model, LHS, data)
+
+  # number of modified rows
+  ncon = nconstraints(model)
+  nrow = nfun + ncon
+
+  # factorize LHS
+  VHS = view(LHS, 1:nrow, 1:nrow)
+  FHS = lhsfactorize(model, VHS)
+
+  nothing
 end
 
 # make sure data is compatible with model
@@ -83,6 +109,16 @@ function checkcompat(model::KrigingModel, data)
   end
 end
 
+# make sure data size is compatible
+function checkdatasize(fitted::FittedKriging, data)
+  LHS = fitted.state.LHS
+  nlhs = size(LHS, 1)
+  nobs = nrow(data)
+  if nobs > nlhs
+    throw(ArgumentError("in-place fit called with $nobs data row(s) and $nlhs maximum size"))
+  end
+end
+
 # pre-allocate memory for LHS and RHS
 function prealloc(model::KrigingModel, data)
   fun = model.fun
@@ -92,7 +128,8 @@ function prealloc(model::KrigingModel, data)
   nobs = nelements(dom)
   nvar = nvariates(fun)
   ncon = nconstraints(model)
-  nrow = nobs * nvar + ncon
+  nfun = nobs * nvar
+  nrow = nfun + ncon
 
   # pre-allocate memory for LHS
   F = fun(dom[1], dom[1])
@@ -111,8 +148,10 @@ function setlhs!(model::KrigingModel, LHS, data)
   dom = domain(data)
   tab = values(data)
 
-  # number of model constraints
-  ncon = nconstraints(model)
+  # number of function evaluations
+  nobs = nelements(dom)
+  nvar = nvariates(fun)
+  nfun = nobs * nvar
 
   # find locations with missing values
   miss = missingindices(tab)
@@ -129,9 +168,9 @@ function setlhs!(model::KrigingModel, LHS, data)
   lhsconstraints!(model, LHS, dom)
 
   # knock out entries with missing values
-  lhsmissings!(LHS, ncon, miss)
+  lhsmissings!(LHS, nfun, miss)
 
-  ncon, miss
+  nfun, miss
 end
 
 # choose appropriate factorization of LHS
@@ -162,7 +201,7 @@ function lhsbanded!(LHS, fun, dom)
 
   # retrieve matrix paramaters
   nobs = nelements(dom)
-  nvar = size(S, 1)
+  nvar = nvariates(fun)
   nfun = nobs * nvar
 
   @inbounds for j in 1:nfun, i in 1:nfun
@@ -191,9 +230,7 @@ function missingindices(tab)
 end
 
 # knock out entries with missing values
-function lhsmissings!(LHS, ncon, miss)
-  nrow = size(LHS, 1)
-  nfun = nrow - ncon
+function lhsmissings!(LHS, nfun, miss)
   @inbounds for j in miss, i in 1:nfun
     LHS[i, j] = 0
   end
@@ -306,7 +343,7 @@ end
 function weights(fitted::FittedKriging, gₒ)
   FHS = fitted.state.FHS
   RHS = fitted.state.RHS
-  ncon = fitted.state.ncon
+  nfun = fitted.state.nfun
   data = fitted.state.data
 
   # retrieve domain of data
@@ -321,12 +358,9 @@ function weights(fitted::FittedKriging, gₒ)
   # solve Kriging system
   W = FHS \ RHS
 
-  # index of first constraint
-  ind = size(FHS, 1) - ncon + 1
-
   # split weights and Lagrange multipliers
-  λ = @view W[begin:(ind - 1), :]
-  ν = @view W[ind:end, :]
+  λ = @view W[begin:nfun, :]
+  ν = @view W[(nfun+1):end, :]
 
   KrigingWeights(λ, ν)
 end
