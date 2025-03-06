@@ -55,8 +55,14 @@ _status(FHS::SVD) = true
 #--------------
 
 function fit(model::KrigingModel, data)
-  # initialize Kriging system
-  LHS, RHS, ncon, miss = initkrig(model, data)
+  # check compatibility of model and data
+  checkcompat(model, data)
+
+  # pre-allocate memory for LHS and RHS
+  LHS, RHS = prealloc(model, data)
+
+  # set LHS of Kriging system
+  ncon, miss = setlhs!(model, LHS, data)
 
   # factorize LHS
   FHS = lhsfactorize(model, LHS)
@@ -67,11 +73,20 @@ function fit(model::KrigingModel, data)
   FittedKriging(model, state)
 end
 
-# initialize Kriging system
-function initkrig(model::KrigingModel, data)
+# make sure data is compatible with model
+function checkcompat(model::KrigingModel, data)
+  fun = model.fun
+  nvar = nvariates(fun)
+  nfeat = ncol(data) - 1
+  if nfeat != nvar
+    throw(ArgumentError("$nfeat data column(s) provided to $nvar-variate Kriging model"))
+  end
+end
+
+# pre-allocate memory for LHS and RHS
+function prealloc(model::KrigingModel, data)
   fun = model.fun
   dom = domain(data)
-  tab = values(data)
 
   # retrieve matrix parameters
   nobs = nelements(dom)
@@ -79,16 +94,28 @@ function initkrig(model::KrigingModel, data)
   ncon = nconstraints(model)
   nrow = nobs * nvar + ncon
 
-  # make sure data is compatible with model
-  nfeat = ncol(data) - 1
-  if nfeat != nvar
-    throw(ArgumentError("$nfeat data column(s) provided to $nvar-variate Kriging model"))
-  end
-
   # pre-allocate memory for LHS
   F = fun(dom[1], dom[1])
   V = eltype(ustrip.(F))
   LHS = Matrix{V}(undef, nrow, nrow)
+
+  # pre-allocate memory for RHS
+  RHS = similar(LHS, nrow, nvar)
+
+  LHS, RHS
+end
+
+# set LHS of Kriging system
+function setlhs!(model::KrigingModel, LHS, data)
+  fun = model.fun
+  dom = domain(data)
+  tab = values(data)
+
+  # number of model constraints
+  ncon = nconstraints(model)
+
+  # find locations with missing values
+  miss = missingindices(tab)
 
   # set main block with pairwise evaluation
   GeoStatsFunctions.pairwise!(LHS, fun, dom)
@@ -101,16 +128,10 @@ function initkrig(model::KrigingModel, data)
   # set blocks of constraints
   lhsconstraints!(model, LHS, dom)
 
-  # find locations with missing values
-  miss = missingindices(tab)
-
   # knock out entries with missing values
   lhsmissings!(LHS, ncon, miss)
 
-  # pre-allocate memory for RHS
-  RHS = similar(LHS, nrow, nvar)
-
-  LHS, RHS, ncon, miss
+  ncon, miss
 end
 
 # choose appropriate factorization of LHS
@@ -281,30 +302,21 @@ function wmul(weights::KrigingWeights, RHS)
   Kλ, Kν
 end
 
+# solve Kriging system at target geometry
 function weights(fitted::FittedKriging, gₒ)
   FHS = fitted.state.FHS
   RHS = fitted.state.RHS
   ncon = fitted.state.ncon
-  miss = fitted.state.miss
-  dom = domain(fitted.state.data)
-  fun = fitted.model.fun
+  data = fitted.state.data
+
+  # retrieve domain of data
+  dom = domain(data)
 
   # adjust CRS of gₒ
   gₒ′ = gₒ |> Proj(crs(dom))
 
-  # set main blocks with pairwise evaluation
-  GeoStatsFunctions.pairwise!(RHS, fun, dom, [gₒ′])
-
-  # adjustments for numerical stability
-  if isstationary(fun) && !isbanded(fun)
-    rhsbanded!(RHS, fun, dom)
-  end
-
-  # set blocks of constraints
-  rhsconstraints!(fitted, gₒ′)
-
-  # knock out entries with missing values
-  rhsmissings!(RHS, miss)
+  # set RHS of Kriging system
+  setrhs!(fitted, RHS, dom, gₒ′)
 
   # solve Kriging system
   W = FHS \ RHS
@@ -317,6 +329,28 @@ function weights(fitted::FittedKriging, gₒ)
   ν = @view W[ind:end, :]
 
   KrigingWeights(λ, ν)
+end
+
+# set RHS of Kriging system
+function setrhs!(fitted::FittedKriging, RHS, dom, gₒ)
+  fun = fitted.model.fun
+  miss = fitted.state.miss
+
+  # set main blocks with pairwise evaluation
+  GeoStatsFunctions.pairwise!(RHS, fun, dom, [gₒ])
+
+  # adjustments for numerical stability
+  if isstationary(fun) && !isbanded(fun)
+    rhsbanded!(RHS, fun, dom)
+  end
+
+  # set blocks of constraints
+  rhsconstraints!(fitted, gₒ)
+
+  # knock out entries with missing values
+  rhsmissings!(RHS, miss)
+
+  nothing
 end
 
 # convert RHS into banded matrix
