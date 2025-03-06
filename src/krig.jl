@@ -10,15 +10,16 @@ A Kriging model (e.g. Simple Kriging, Ordinary Kriging).
 abstract type KrigingModel <: GeoStatsModel end
 
 """
-    KrigingState(data, LHS, RHS, ncon)
+    KrigingState(data, LHS, RHS, FHS, ncon, miss)
 
 A Kriging state stores information needed
 to perform estimation at any given geometry.
 """
-mutable struct KrigingState{D<:AbstractGeoTable,F,A}
+mutable struct KrigingState{D<:AbstractGeoTable,L,R,F}
   data::D
-  LHS::F
-  RHS::A
+  LHS::L
+  RHS::R
+  FHS::F
   ncon::Int
   miss::Vector{Int}
 end
@@ -44,10 +45,10 @@ struct FittedKriging{M<:KrigingModel,S<:KrigingState} <: FittedGeoStatsModel
   state::S
 end
 
-status(fitted::FittedKriging) = _status(fitted.state.LHS)
+status(fitted::FittedKriging) = _status(fitted.state.FHS)
 
-_status(LHS) = issuccess(LHS)
-_status(LHS::SVD) = true
+_status(FHS) = issuccess(FHS)
+_status(FHS::SVD) = true
 
 #--------------
 # FITTING STEP
@@ -58,10 +59,10 @@ function fit(model::KrigingModel, data)
   LHS, RHS, ncon, miss = initkrig(model, data)
 
   # factorize LHS
-  FLHS = lhsfactorize(model, LHS)
+  FHS = lhsfactorize(model, LHS)
 
   # record Kriging state
-  state = KrigingState(data, FLHS, RHS, ncon, miss)
+  state = KrigingState(data, LHS, RHS, FHS, ncon, miss)
 
   FittedKriging(model, state)
 end
@@ -281,7 +282,7 @@ function wmul(weights::KrigingWeights, RHS)
 end
 
 function weights(fitted::FittedKriging, gₒ)
-  LHS = fitted.state.LHS
+  FHS = fitted.state.FHS
   RHS = fitted.state.RHS
   ncon = fitted.state.ncon
   miss = fitted.state.miss
@@ -306,10 +307,10 @@ function weights(fitted::FittedKriging, gₒ)
   rhsmissings!(RHS, miss)
 
   # solve Kriging system
-  W = LHS \ RHS
+  W = FHS \ RHS
 
   # index of first constraint
-  ind = size(LHS, 1) - ncon + 1
+  ind = size(FHS, 1) - ncon + 1
 
   # split weights and Lagrange multipliers
   λ = @view W[begin:(ind - 1), :]
