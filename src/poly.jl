@@ -13,9 +13,9 @@ end
 
 Polynomial() = Polynomial(1)
 
-mutable struct PolynomialState{D<:AbstractGeoTable,C}
+mutable struct PolynomialState{D<:AbstractGeoTable,P}
   data::D
-  coeffs::C
+  proj::P
 end
 
 struct FittedPolynomial{M<:Polynomial,S<:PolynomialState} <: FittedGeoStatsModel
@@ -34,23 +34,18 @@ function fit(model::Polynomial, data)
   deg = model.degree
   dom = domain(data)
 
-  # multivariate Vandermonde matrix
+  # raw coordinates of centroids
   x(i) = CoordRefSystems.raw(coords(centroid(dom, i)))
   xs = (x(i) for i in 1:nelements(dom))
+
+  # multivariate Vandermonde matrix
   V = vandermonde(xs, deg)
 
   # regression matrix
-  P = V'V \ V'
-
-  # regression coefficients
-  cols = Tables.columns(values(data))
-  vars = Tables.columnnames(cols)
-  coeffs = map(vars) do var
-    P * Tables.getcolumn(cols, var)
-  end
+  proj = (transpose(V) * V) \ transpose(V)
 
   # record state
-  state = PolynomialState(data, Dict(vars .=> coeffs))
+  state = PolynomialState(data, proj)
 
   # return fitted model
   FittedPolynomial(model, state)
@@ -65,14 +60,25 @@ predict(fitted::FittedPolynomial, var::Symbol, gₒ) = evalpoly(fitted, var, g�
 predictprob(fitted::FittedPolynomial, var::Symbol, gₒ) = Dirac(predict(fitted, var, gₒ))
 
 function evalpoly(fitted::FittedPolynomial, var, gₒ)
-  θ = fitted.state.coeffs
   deg = fitted.model.degree
-  dom = domain(fitted.state.data)
+  data = fitted.state.data
+  proj = fitted.state.proj
+
   # adjust CRS of gₒ
-  gₒ′ = gₒ |> Proj(crs(dom))
+  gₒ′ = gₒ |> Proj(crs(domain(data)))
+
+  # raw coordinates of centroid
   xₒ = CoordRefSystems.raw(coords(centroid(gₒ′)))
+
+  # multivariate Vandermonde matrix
   V = vandermonde((xₒ,), deg)
-  first(V * θ[var])
+
+  # regression coefficients
+  c = Tables.columns(values(data))
+  z = Tables.getcolumn(c, var)
+  θ = proj * z
+
+  first(V * θ)
 end
 
 function vandermonde(xs, deg)
