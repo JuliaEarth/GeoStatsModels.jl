@@ -96,7 +96,7 @@ function setx!(::LWR, X, data)
   dom = domain(data)
   x(i) = CoordRefSystems.raw(coords(centroid(dom, i)))
   @inbounds for i in 1:nelements(dom)
-    X[i, 2:end] .= x(i)
+    X[i, (begin + 1):end] .= x(i)
   end
 end
 
