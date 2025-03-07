@@ -403,9 +403,9 @@
     data = georef((; a=[1.0, 0.0, 0.0], b=[0.0, 1.0, 0.0], c=[0.0, 0.0, 1.0]), pset)
 
     γ = [1.0 0.3 0.1; 0.3 1.0 0.2; 0.1 0.2 1.0] * SphericalVariogram(range=35.0)
-    sk = GeoStatsModels.fit(SK(γ, [0.0, 0.0, 0.0]), data)
-    ok = GeoStatsModels.fit(OK(γ), data)
-    dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
+    sk = GeoStatsModels.fit(SK(γ, [0.0, 0.0, 0.0]), data[1:3,:])
+    ok = GeoStatsModels.fit(OK(γ), data[1:3,:])
+    dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data[1:3,:])
 
     # fit with first two samples
     GeoStatsModels.fit!(sk, data[1:2,:])

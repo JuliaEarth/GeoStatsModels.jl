@@ -15,11 +15,11 @@ abstract type KrigingModel <: GeoStatsModel end
 A Kriging state stores information needed
 to perform estimation at any given geometry.
 """
-mutable struct KrigingState{L,R}
-  data::AbstractGeoTable
+mutable struct KrigingState{D<:AbstractGeoTable,L,R,F}
+  data::D
   LHS::L
   RHS::R
-  FHS::Factorization
+  FHS::F
   nfun::Int
   miss::Vector{Int}
 end
@@ -65,7 +65,8 @@ function fit(model::KrigingModel, data)
   nfun, miss = setlhs!(model, LHS, data)
 
   # factorize LHS
-  FHS = lhsfactorize(model, LHS)
+  VHS = @view LHS[1:end, 1:end]
+  FHS = lhsfactorize(model, VHS)
 
   # record Kriging state
   state = KrigingState(data, LHS, RHS, FHS, nfun, miss)
