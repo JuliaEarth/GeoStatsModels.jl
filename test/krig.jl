@@ -398,6 +398,52 @@
     @test all(μ -> 0 ≤ μ ≤ 1, dkmean)
   end
 
+  @testset "In-place fit" begin
+    pset = [Point(25.0, 25.0), Point(50.0, 75.0), Point(75.0, 50.0)]
+    data = georef((; a=[1.0, 0.0, 0.0], b=[0.0, 1.0, 0.0], c=[0.0, 0.0, 1.0]), pset)
+
+    γ = [1.0 0.3 0.1; 0.3 1.0 0.2; 0.1 0.2 1.0] * SphericalVariogram(range=35.0)
+    sk = GeoStatsModels.fit(SK(γ, [0.0, 0.0, 0.0]), data)
+    ok = GeoStatsModels.fit(OK(γ), data)
+    dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
+
+    # fit with first two samples
+    GeoStatsModels.fit!(sk, data[1:2,:])
+    GeoStatsModels.fit!(ok, data[1:2,:])
+    GeoStatsModels.fit!(dk, data[1:2,:])
+
+    # interpolation property
+    for i in 1:2
+      skdist = GeoStatsModels.predictprob(sk, (:a, :b, :c), pset[i])
+      okdist = GeoStatsModels.predictprob(ok, (:a, :b, :c), pset[i])
+      dkdist = GeoStatsModels.predictprob(dk, (:a, :b, :c), pset[i])
+      @test mean(skdist) ≈ [j == i for j in 1:3]
+      @test mean(okdist) ≈ [j == i for j in 1:3]
+      @test mean(dkdist) ≈ [j == i for j in 1:3]
+      @test isapprox(var(skdist), [0.0, 0.0, 0.0], atol=1e-8)
+      @test isapprox(var(okdist), [0.0, 0.0, 0.0], atol=1e-8)
+      @test isapprox(var(dkdist), [0.0, 0.0, 0.0], atol=1e-8)
+    end
+
+    # fit with last two samples
+    GeoStatsModels.fit!(sk, data[2:3,:])
+    GeoStatsModels.fit!(ok, data[2:3,:])
+    GeoStatsModels.fit!(dk, data[2:3,:])
+
+    # interpolation property
+    for i in 2:3
+      skdist = GeoStatsModels.predictprob(sk, (:a, :b, :c), pset[i])
+      okdist = GeoStatsModels.predictprob(ok, (:a, :b, :c), pset[i])
+      dkdist = GeoStatsModels.predictprob(dk, (:a, :b, :c), pset[i])
+      @test mean(skdist) ≈ [j == i for j in 1:3]
+      @test mean(okdist) ≈ [j == i for j in 1:3]
+      @test mean(dkdist) ≈ [j == i for j in 1:3]
+      @test isapprox(var(skdist), [0.0, 0.0, 0.0], atol=1e-8)
+      @test isapprox(var(okdist), [0.0, 0.0, 0.0], atol=1e-8)
+      @test isapprox(var(dkdist), [0.0, 0.0, 0.0], atol=1e-8)
+    end
+  end
+
   @testset "Fallbacks" begin
     d = georef((; z=[1.0, 0.0, 1.0]), [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)])
     γ = GaussianVariogram()

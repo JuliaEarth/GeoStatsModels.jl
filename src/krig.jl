@@ -15,11 +15,11 @@ abstract type KrigingModel <: GeoStatsModel end
 A Kriging state stores information needed
 to perform estimation at any given geometry.
 """
-mutable struct KrigingState{D<:AbstractGeoTable,L,R,F}
-  data::D
+mutable struct KrigingState{L,R}
+  data::AbstractGeoTable
   LHS::L
   RHS::R
-  FHS::F
+  FHS::Factorization
   nfun::Int
   miss::Vector{Int}
 end
@@ -73,28 +73,29 @@ function fit(model::KrigingModel, data)
   FittedKriging(model, state)
 end
 
-function fit!(fitted::FittedKriging, data)
+function fit!(fitted::FittedKriging, newdata)
   model = fitted.model
-  LHS = fitted.state.LHS
-  FHS = fitted.state.FHS
-  miss = fitted.state.miss
+  state = fitted.state
 
   # check compatibility of data size
-  checkdatasize(fitted, data)
+  checkdatasize(fitted, newdata)
 
   # check compatibility of model and data
-  checkcompat(model, data)
+  checkcompat(model, newdata)
+
+  # update state data
+  state.data = newdata
 
   # set LHS of Kriging system
-  nfun, miss = setlhs!(model, LHS, data)
+  state.nfun, state.miss = setlhs!(model, state.LHS, newdata)
 
   # number of modified rows
   ncon = nconstraints(model)
-  nrow = nfun + ncon
+  nrow = state.nfun + ncon
 
   # factorize LHS
-  VHS = view(LHS, 1:nrow, 1:nrow)
-  FHS = lhsfactorize(model, VHS)
+  VHS = @view state.LHS[1:nrow, 1:nrow]
+  state.FHS = lhsfactorize(model, VHS)
 
   nothing
 end
@@ -295,11 +296,20 @@ end
 ⦿(λ, z::Missing) = 0
 
 function predictvar(fitted::FittedKriging, weights::KrigingWeights, gₒ)
+  model = fitted.model
   RHS = fitted.state.RHS
-  fun = fitted.model.fun
+  nfun = fitted.state.nfun
+  ncon = nconstraints(model)
+  nrow = nfun + ncon
+
+  # geostatistical function
+  fun = model.fun
+
+  # view valid rows of RHS
+  VHS = @view RHS[1:nrow, :]
 
   # covariance formula for given function
-  Σ = krigvar(fun, weights, RHS, gₒ)
+  Σ = krigvar(fun, weights, VHS, gₒ)
 
   # treat numerical issues
   ϵ = eltype(Σ)(1e-10)
@@ -341,10 +351,11 @@ end
 
 # solve Kriging system at target geometry
 function weights(fitted::FittedKriging, gₒ)
+  data = fitted.state.data
   FHS = fitted.state.FHS
   RHS = fitted.state.RHS
   nfun = fitted.state.nfun
-  data = fitted.state.data
+  nrow = size(FHS, 1)
 
   # retrieve domain of data
   dom = domain(data)
@@ -356,7 +367,7 @@ function weights(fitted::FittedKriging, gₒ)
   setrhs!(fitted, RHS, dom, gₒ′)
 
   # solve Kriging system
-  W = FHS \ RHS
+  W = FHS \ @view RHS[1:nrow, :]
 
   # split weights and Lagrange multipliers
   λ = @view W[begin:nfun, :]
@@ -394,7 +405,7 @@ function rhsbanded!(RHS, fun, dom)
 
   # retrieve matrix paramaters
   nobs = nelements(dom)
-  nvar = size(S, 1)
+  nvar = nvariates(fun)
   nfun = nobs * nvar
 
   @inbounds for j in 1:nvar, i in 1:nfun
