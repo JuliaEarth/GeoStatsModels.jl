@@ -25,7 +25,7 @@ end
 IDW(exponent) = IDW(exponent, Euclidean())
 IDW() = IDW(1)
 
-struct IDWState{D<:AbstractGeoTable}
+mutable struct IDWState{D<:AbstractGeoTable}
   data::D
 end
 
@@ -46,6 +46,13 @@ function fit(model::IDW, data)
 
   # return fitted model
   FittedIDW(model, state)
+end
+
+function fit!(fitted::FittedIDW, newdata)
+  # update state data
+  fitted.state.data = newdata
+
+  nothing
 end
 
 #-----------------
