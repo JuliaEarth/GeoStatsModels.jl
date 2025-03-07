@@ -126,9 +126,9 @@ function matrices(fitted::FittedLWR, var, gₒ)
   # adjust CRS of gₒ
   gₒ′ = gₒ |> Proj(crs(domain(d)))
 
-  X = fitted.state.X
+  X = @view fitted.state.X[1:nrow(d), :]
   W = wmatrix(fitted, gₒ′)
-  A = X' * W * X
+  A = transpose(X) * W * X
 
   xₒ = CoordRefSystems.raw(coords(centroid(gₒ′)))
   x = [one(eltype(xₒ)), xₒ...]
