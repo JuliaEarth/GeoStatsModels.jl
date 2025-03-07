@@ -13,7 +13,7 @@ end
 
 Polynomial() = Polynomial(1)
 
-struct PolynomialState{D<:AbstractGeoTable,C}
+mutable struct PolynomialState{D<:AbstractGeoTable,C}
   data::D
   coeffs::C
 end
@@ -31,13 +31,13 @@ status(fitted::FittedPolynomial) = true
 
 function fit(model::Polynomial, data)
   # retrieve parameters
-  d = model.degree
-  D = domain(data)
+  deg = model.degree
+  dom = domain(data)
 
   # multivariate Vandermonde matrix
-  x(i) = CoordRefSystems.raw(coords(centroid(D, i)))
-  xs = (x(i) for i in 1:nelements(D))
-  V = vandermonde(xs, d)
+  x(i) = CoordRefSystems.raw(coords(centroid(dom, i)))
+  xs = (x(i) for i in 1:nelements(dom))
+  V = vandermonde(xs, deg)
 
   # regression matrix
   P = V'V \ V'
@@ -65,19 +65,19 @@ predict(fitted::FittedPolynomial, var::Symbol, gₒ) = evalpoly(fitted, var, g�
 predictprob(fitted::FittedPolynomial, var::Symbol, gₒ) = Dirac(predict(fitted, var, gₒ))
 
 function evalpoly(fitted::FittedPolynomial, var, gₒ)
-  D = domain(fitted.state.data)
   θ = fitted.state.coeffs
-  d = fitted.model.degree
+  deg = fitted.model.degree
+  dom = domain(fitted.state.data)
   # adjust CRS of gₒ
-  gₒ′ = gₒ |> Proj(crs(D))
+  gₒ′ = gₒ |> Proj(crs(dom))
   xₒ = CoordRefSystems.raw(coords(centroid(gₒ′)))
-  V = vandermonde((xₒ,), d)
+  V = vandermonde((xₒ,), deg)
   first(V * θ[var])
 end
 
-function vandermonde(xs, d)
+function vandermonde(xs, deg)
   n = length(first(xs))
-  I = (multiexponents(n, d) for d in 0:d)
+  I = (multiexponents(n, d) for d in 0:deg)
   es = Iterators.flatten(I) |> collect
   [prod(x .^ e) for x in xs, e in es]
 end
