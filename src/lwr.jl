@@ -52,7 +52,7 @@ function fit(model::LWR, data)
 
   # coordinates matrix
   X = stack(x, 1:n)
-  X = [ones(eltype(X), n) X']
+  X = [ones(eltype(X), n) transpose(X)]
 
   # record state
   state = LWRState(data, X)
