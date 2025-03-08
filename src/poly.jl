@@ -98,7 +98,7 @@ function setproj!(model::Polynomial, proj, data)
   V = vandermonde(xs, deg)
 
   # set regression matrix
-  proj .= (transpose(V) * V) \ transpose(V)
+  proj[:, 1:nelements(dom)] .= (transpose(V) * V) \ transpose(V)
 
   nothing
 end
