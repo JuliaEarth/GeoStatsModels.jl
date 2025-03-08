@@ -30,6 +30,37 @@ status(fitted::FittedPolynomial) = true
 #--------------
 
 function fit(model::Polynomial, data)
+  # preallocate regression matrix
+  proj = prealloc(model, data)
+
+  # set regression matrix
+  setproj!(model, proj, data)
+
+  # record state
+  state = PolynomialState(data, proj)
+
+  # return fitted model
+  FittedPolynomial(model, state)
+end
+
+function prealloc(model::Polynomial, data)
+  # retrieve parameters
+  deg = model.degree
+  dom = domain(data)
+
+  # raw coordinates of centroid
+  x = CoordRefSystems.raw(coords(centroid(dom, 1)))
+  n = length(x)
+
+  # size of regression matrix
+  iter = (multiexponents(n, d) for d in 0:deg)
+  nexp = sum(length, iter)
+  nobs = nelements(dom)
+
+  Matrix{eltype(x)}(undef, nexp, nobs)
+end
+
+function setproj!(model::Polynomial, proj, data)
   # retrieve parameters
   deg = model.degree
   dom = domain(data)
@@ -41,14 +72,10 @@ function fit(model::Polynomial, data)
   # multivariate Vandermonde matrix
   V = vandermonde(xs, deg)
 
-  # regression matrix
-  proj = (transpose(V) * V) \ transpose(V)
+  # set regression matrix
+  proj .= (transpose(V) * V) \ transpose(V)
 
-  # record state
-  state = PolynomialState(data, proj)
-
-  # return fitted model
-  FittedPolynomial(model, state)
+  nothing
 end
 
 #-----------------
