@@ -114,7 +114,6 @@ predictprob(fitted::FittedPolynomial, var::Symbol, gₒ) = Dirac(predict(fitted,
 function evalpoly(fitted::FittedPolynomial, var, gₒ)
   deg = fitted.model.degree
   data = fitted.state.data
-  proj = fitted.state.proj
 
   # adjust CRS of gₒ
   gₒ′ = gₒ |> Proj(crs(domain(data)))
@@ -126,9 +125,10 @@ function evalpoly(fitted::FittedPolynomial, var, gₒ)
   V = vandermonde((xₒ,), deg)
 
   # regression coefficients
+  P = @view fitted.state.proj[:, 1:nrow(data)]
   c = Tables.columns(values(data))
   z = Tables.getcolumn(c, var)
-  θ = proj * z
+  θ = P * z
 
   first(V * θ)
 end
