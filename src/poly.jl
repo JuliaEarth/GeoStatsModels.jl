@@ -43,6 +43,31 @@ function fit(model::Polynomial, data)
   FittedPolynomial(model, state)
 end
 
+function fit!(fitted::FittedPolynomial, newdata)
+  model = fitted.model
+  state = fitted.state
+
+  # check compatibility of data size
+  checkdatasize(fitted, newdata)
+
+  # update state data
+  state.data = newdata
+
+  # set coordinate matrix
+  setproj!(model, state.proj, newdata)
+
+  nothing
+end
+
+function checkdatasize(fitted::FittedPolynomial, data)
+  proj = fitted.state.proj
+  nproj = size(proj, 2)
+  nobs = nrow(data)
+  if nobs > nproj
+    throw(ArgumentError("in-place fit called with $nobs data row(s) and $nproj maximum size"))
+  end
+end
+
 function prealloc(model::Polynomial, data)
   # retrieve parameters
   deg = model.degree
