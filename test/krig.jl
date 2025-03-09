@@ -411,8 +411,6 @@
     GeoStatsModels.fit!(sk, data[1:2,:])
     GeoStatsModels.fit!(ok, data[1:2,:])
     GeoStatsModels.fit!(dk, data[1:2,:])
-
-    # interpolation property
     for i in 1:2
       skdist = GeoStatsModels.predictprob(sk, (:a, :b, :c), pset[i])
       okdist = GeoStatsModels.predictprob(ok, (:a, :b, :c), pset[i])
@@ -429,8 +427,6 @@
     GeoStatsModels.fit!(sk, data[2:3,:])
     GeoStatsModels.fit!(ok, data[2:3,:])
     GeoStatsModels.fit!(dk, data[2:3,:])
-
-    # interpolation property
     for i in 2:3
       skdist = GeoStatsModels.predictprob(sk, (:a, :b, :c), pset[i])
       okdist = GeoStatsModels.predictprob(ok, (:a, :b, :c), pset[i])
