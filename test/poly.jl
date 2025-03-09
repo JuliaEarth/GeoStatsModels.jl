@@ -67,6 +67,25 @@
     @test pred isa Composition
   end
 
+  @testset "In-place fit" begin
+    pset = [Point(25.0, 25.0), Point(50.0, 75.0), Point(75.0, 50.0), Point(20.0, 50.0)]
+    data = georef((; z=[1.0, 0.0, 1.0, 0.0]), pset)
+
+    poly = GeoStatsModels.fit(Polynomial(2), data[1:4,:])
+
+    # fit with first two samples
+    GeoStatsModels.fit!(poly, data[1:3,:])
+    for i in 1:3
+      @test GeoStatsModels.predict(poly, :z, pset[i]) ≈ data.z[i] atol=1e-8
+    end
+
+    # fit with last two samples
+    GeoStatsModels.fit!(poly, data[2:4,:])
+    for i in 2:4
+      @test GeoStatsModels.predict(poly, :z, pset[i]) ≈ data.z[i] atol=1e-8
+    end
+  end
+
   @testset "Fallbacks" begin
     d = georef((; z=[1.0, 0.0, 1.0]), [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)])
     poly = GeoStatsModels.fit(Polynomial(), d)

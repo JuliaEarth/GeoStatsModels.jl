@@ -13,7 +13,7 @@ end
 
 NN() = NN(Euclidean())
 
-struct NNState{D<:AbstractGeoTable}
+mutable struct NNState{D<:AbstractGeoTable}
   data::D
 end
 
@@ -34,6 +34,13 @@ function fit(model::NN, data)
 
   # return fitted model
   FittedNN(model, state)
+end
+
+function fit!(fitted::FittedNN, newdata)
+  # update state data
+  fitted.state.data = newdata
+
+  nothing
 end
 
 #-----------------

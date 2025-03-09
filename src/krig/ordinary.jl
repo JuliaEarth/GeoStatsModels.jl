@@ -14,17 +14,15 @@ end
 nconstraints(model::OrdinaryKriging) = nvariates(model.fun)
 
 function lhsconstraints!(model::OrdinaryKriging, LHS::AbstractMatrix, domain)
-  # number of variables
+  nobs = nelements(domain)
   nvar = nvariates(model.fun)
-
-  # number of constraints
   ncon = nconstraints(model)
-
-  # retrieve size of LHS
-  nrow, ncol = size(LHS)
+  nfun = nobs * nvar
+  nrow = nfun + ncon
+  ncol = nrow
 
   # index of first constraint
-  ind = nrow - ncon + 1
+  ind = nfun + 1
 
   # set identity blocks
   @inbounds for j in 1:(ind - 1), i in ind:nrow
@@ -44,13 +42,14 @@ end
 
 function rhsconstraints!(fitted::FittedKriging{<:OrdinaryKriging}, gₒ)
   RHS = fitted.state.RHS
-  ncon = fitted.state.ncon
-
-  # retrieve size of RHS
-  nrow, ncol = size(RHS)
+  nvar = nvariates(fitted.model.fun)
+  ncon = nconstraints(fitted.model)
+  nfun = fitted.state.nfun
+  nrow = nfun + ncon
+  ncol = nvar
 
   # index of first constraint
-  ind = nrow - ncon + 1
+  ind = nfun + 1
 
   # set identity block
   @inbounds for j in 1:ncol, i in ind:nrow

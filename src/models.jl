@@ -127,7 +127,12 @@ function fitpredictneigh(model, gtb, dom, path, point, prob, minneighbors, maxne
   end
 
   # pre-allocate memory for neighbors
-  neighbors = Vector{Int}(undef, maxneighbors)
+  neighbors = collect(1:maxneighbors)
+
+  # initialize fitted model with first samples
+  ninds = view(neighbors, 1:maxneighbors)
+  ndata = view(gtb, ninds)
+  fmodel = fit(model, ndata)
 
   # traverse domain with given path
   inds = traverse(dom, path)
@@ -143,18 +148,18 @@ function fitpredictneigh(model, gtb, dom, path, point, prob, minneighbors, maxne
     center = centroid(dom, ind)
 
     # find neighbors with data
-    nneigh = search!(neighbors, center, searcher)
+    n = search!(neighbors, center, searcher)
 
     # predict if enough neighbors
-    if nneigh ≥ minneighbors
+    if n ≥ minneighbors
       # final set of neighbors
-      ninds = view(neighbors, 1:nneigh)
+      ninds = view(neighbors, 1:n)
 
       # view neighborhood with data
-      samples = view(gtb, ninds)
+      ndata = view(gtb, ninds)
 
-      # fit model to samples
-      fmodel = fit(model, samples)
+      # fit model to neighborhood
+      fit!(fmodel, ndata)
 
       # save prediction
       geom = point ? center : dom[ind]
