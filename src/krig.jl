@@ -65,7 +65,7 @@ function fit(model::KrigingModel, data)
   nfun, miss = setlhs!(model, LHS, data)
 
   # factorize LHS
-  VHS = @view LHS[1:end, 1:end]
+  VHS = @view LHS[begin:end, begin:end]
   FHS = lhsfactorize(model, VHS)
 
   # record Kriging state
