@@ -11,6 +11,8 @@ struct OrdinaryKriging{F<:GeoStatsFunction} <: KrigingModel
   fun::F
 end
 
+scale(model::OrdinaryKriging, α) = OrdinaryKriging(GeoStatsFunctions.scale(model.fun, α))
+
 nconstraints(model::OrdinaryKriging) = nvariates(model.fun)
 
 function lhsconstraints!(model::OrdinaryKriging, LHS::AbstractMatrix, domain)

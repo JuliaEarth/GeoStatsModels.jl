@@ -26,6 +26,8 @@ end
 
 UniversalKriging(fun::GeoStatsFunction, deg::Int, dim::Int) = UniversalKriging(fun, monomials(deg, dim))
 
+scale(model::UniversalKriging, α) = UniversalKriging(GeoStatsFunctions.scale(model.fun, α), model.drifts)
+
 function monomials(deg::Int, dim::Int)
   # sanity checks
   @assert deg ≥ 0 "degree must be nonnegative"
