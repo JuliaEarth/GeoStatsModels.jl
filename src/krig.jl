@@ -9,6 +9,8 @@ A Kriging model (e.g. Simple Kriging, Ordinary Kriging).
 """
 abstract type KrigingModel <: GeoStatsModel end
 
+Base.range(model::KrigingModel) = range(model.fun)
+
 """
     KrigingState(data, LHS, RHS, ncon)
 

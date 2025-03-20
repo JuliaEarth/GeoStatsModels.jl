@@ -26,6 +26,8 @@ SimpleKriging(fun::F, mean::M) where {F<:GeoStatsFunction,M<:AbstractVector} = S
 
 SimpleKriging(fun, mean) = SimpleKriging(fun, [mean])
 
+scale(model::SimpleKriging, α) = SimpleKriging(GeoStatsFunctions.scale(model.fun, α), model.mean)
+
 nconstraints(::SimpleKriging) = 0
 
 lhsconstraints!(::SimpleKriging, LHS::AbstractMatrix, domain) = nothing
