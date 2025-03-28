@@ -9,7 +9,7 @@ Simple Kriging with geostatistical function `fun` and constant `mean`.
 
 ### Notes
 
-* Simple Kriging requires stationary geostatistical function
+Simple Kriging requires stationary geostatistical function.
 """
 struct SimpleKriging{F<:GeoStatsFunction,M<:AbstractVector} <: KrigingModel
   # input fields
