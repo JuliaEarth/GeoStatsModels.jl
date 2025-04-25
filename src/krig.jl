@@ -122,9 +122,10 @@ _lhsfactorize(::Variogram, LHS) = bunchkaufman!(Symmetric(LHS), check=false)
 _lhsfactorize(::Covariance, LHS) = bunchkaufman!(Symmetric(LHS), check=false)
 
 # enforce SVD factorization for rank-deficient matrices
-_lhsfactorize(::Transiogram, LHS) = svd!(LHS)
+# use QRIteration to avoid LAPACK bug: https://github.com/Reference-LAPACK/lapack/issues/672
+_lhsfactorize(::Transiogram, LHS) = svd!(LHS, alg=QRIteration())
 
-# choose appropriate factorization for other functions
+# choose appropriate factorization for other functions (e.g., CompositeFunction)
 function _lhsfactorize(fun::GeoStatsFunction, LHS)
   if issymmetric(fun)
     # enforce Bunch-Kaufman factorization

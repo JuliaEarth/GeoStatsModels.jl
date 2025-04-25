@@ -16,6 +16,8 @@ using Distances
 using Unitful
 using Tables
 
+using LinearAlgebra: QRIteration
+
 include("models.jl")
 
 export
