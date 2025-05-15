@@ -150,7 +150,7 @@ function fitpredictneigh(model, dat, dom, path, point, prob, minneighbors, maxne
   end
 
   # pre-allocate memory for neighbors
-  neighbors = Vector{Int}(undef, maxneighbors)
+  thread_neighbors = [Vector{Int}(undef, maxneighbors) for _ in 1:Threads.nthreads()]
 
   # traverse domain with given path
   inds = traverse(dom, path)
@@ -161,11 +161,17 @@ function fitpredictneigh(model, dat, dom, path, point, prob, minneighbors, maxne
   # predict variables
   cols = Tables.columns(values(dat))
   vars = Tables.columnnames(cols)
-  pred = @inbounds map(inds) do ind
+
+  # Pre-allocate results vector
+  pred = Vector{NamedTuple}(undef, length(inds))
+
+  Threads.@threads for i in eachindex(inds)
+    ind = inds[i]
     # centroid of estimation
     center = centroid(dom, ind)
 
     # find neighbors with data
+    neighbors = thread_neighbors[Threads.threadid()]
     nneigh = search!(neighbors, center, searcher)
 
     # predict if enough neighbors
@@ -174,7 +180,7 @@ function fitpredictneigh(model, dat, dom, path, point, prob, minneighbors, maxne
       ninds = view(neighbors, 1:nneigh)
 
       # view neighborhood with data
-      samples = view(dat, ninds)
+      samples = Tables.subset(dat, collect(ninds))
 
       # fit model to samples
       fmodel = fit(model, samples)
@@ -186,7 +192,7 @@ function fitpredictneigh(model, dat, dom, path, point, prob, minneighbors, maxne
       # missing prediction
       vals = fill(missing, length(vars))
     end
-    (; zip(vars, vals)...)
+    pred[i] = (; zip(vars, vals)...)
   end
 
   # convert to original table type
