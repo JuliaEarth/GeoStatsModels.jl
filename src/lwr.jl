@@ -45,20 +45,34 @@ status(fitted::FittedLWR) = true
 #--------------
 
 function fit(model::LWR, data)
-  Ω = domain(data)
-  n = nelements(Ω)
+  # preallocate coordinate matrix
+  X = prealloc(model, data)
 
-  x(i) = CoordRefSystems.raw(coords(centroid(Ω, i)))
-
-  # coordinates matrix
-  X = stack(x, 1:n)
-  X = [ones(eltype(X), n) X']
+  # set coordinate matrix
+  setx!(model, X, data)
 
   # record state
   state = LWRState(data, X)
 
   # return fitted model
   FittedLWR(model, state)
+end
+
+function prealloc(::LWR, data)
+  dom = domain(data)
+  nobs = nelements(dom)
+  x = CoordRefSystems.raw(coords(centroid(dom, 1)))
+  Matrix{eltype(x)}(undef, nobs, length(x) + 1)
+end
+
+function setx!(::LWR, X, data)
+  dom = domain(data)
+  nobs = nelements(dom)
+  x(i) = CoordRefSystems.raw(coords(centroid(dom, i)))
+  @inbounds for i in 1:nobs
+    X[i, 1] = oneunit(eltype(X))
+    X[i, 2:end] .= x(i)
+  end
 end
 
 #-----------------
@@ -89,7 +103,7 @@ function matrices(fitted::FittedLWR, var, gₒ)
 
   X = fitted.state.X
   W = wmatrix(fitted, gₒ′)
-  A = X' * W * X
+  A = transpose(X) * W * X
 
   xₒ = CoordRefSystems.raw(coords(centroid(gₒ′)))
   x = [one(eltype(xₒ)), xₒ...]

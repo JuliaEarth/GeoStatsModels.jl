@@ -13,9 +13,9 @@ end
 
 Polynomial() = Polynomial(1)
 
-struct PolynomialState{D<:AbstractGeoTable,C}
+struct PolynomialState{D<:AbstractGeoTable,P}
   data::D
-  coeffs::C
+  proj::P
 end
 
 struct FittedPolynomial{M<:Polynomial,S<:PolynomialState} <: FittedGeoStatsModel
@@ -30,30 +30,52 @@ status(fitted::FittedPolynomial) = true
 #--------------
 
 function fit(model::Polynomial, data)
-  # retrieve parameters
-  d = model.degree
-  D = domain(data)
+  # preallocate regression matrix
+  proj = prealloc(model, data)
 
-  # multivariate Vandermonde matrix
-  x(i) = CoordRefSystems.raw(coords(centroid(D, i)))
-  xs = (x(i) for i in 1:nelements(D))
-  V = vandermonde(xs, d)
-
-  # regression matrix
-  P = V'V \ V'
-
-  # regression coefficients
-  cols = Tables.columns(values(data))
-  vars = Tables.columnnames(cols)
-  coeffs = map(vars) do var
-    P * Tables.getcolumn(cols, var)
-  end
+  # set regression matrix
+  setproj!(model, proj, data)
 
   # record state
-  state = PolynomialState(data, Dict(vars .=> coeffs))
+  state = PolynomialState(data, proj)
 
   # return fitted model
   FittedPolynomial(model, state)
+end
+
+function prealloc(model::Polynomial, data)
+  # retrieve parameters
+  deg = model.degree
+  dom = domain(data)
+
+  # raw coordinates of centroid
+  x = CoordRefSystems.raw(coords(centroid(dom, 1)))
+  n = length(x)
+
+  # size of regression matrix
+  iter = (multiexponents(n, d) for d in 0:deg)
+  nexp = sum(length, iter)
+  nobs = nelements(dom)
+
+  Matrix{eltype(x)}(undef, nexp, nobs)
+end
+
+function setproj!(model::Polynomial, proj, data)
+  # retrieve parameters
+  deg = model.degree
+  dom = domain(data)
+
+  # raw coordinates of centroids
+  x(i) = CoordRefSystems.raw(coords(centroid(dom, i)))
+  xs = (x(i) for i in 1:nelements(dom))
+
+  # multivariate Vandermonde matrix
+  V = vandermonde(xs, deg)
+
+  # set regression matrix
+  proj .= (transpose(V) * V) \ transpose(V)
+
+  nothing
 end
 
 #-----------------
@@ -65,19 +87,31 @@ predict(fitted::FittedPolynomial, var::Symbol, gₒ) = evalpoly(fitted, var, g�
 predictprob(fitted::FittedPolynomial, var::Symbol, gₒ) = Dirac(predict(fitted, var, gₒ))
 
 function evalpoly(fitted::FittedPolynomial, var, gₒ)
-  D = domain(fitted.state.data)
-  θ = fitted.state.coeffs
-  d = fitted.model.degree
+  # retrieve degree and data
+  deg = fitted.model.degree
+  data = fitted.state.data
+
   # adjust CRS of gₒ
-  gₒ′ = gₒ |> Proj(crs(D))
+  gₒ′ = gₒ |> Proj(crs(domain(data)))
+
+  # raw coordinates of centroid
   xₒ = CoordRefSystems.raw(coords(centroid(gₒ′)))
-  V = vandermonde((xₒ,), d)
-  first(V * θ[var])
+
+  # multivariate Vandermonde matrix
+  V = vandermonde((xₒ,), deg)
+
+  # regression coefficients
+  P = fitted.state.proj
+  c = Tables.columns(values(data))
+  z = Tables.getcolumn(c, var)
+  θ = P * z
+
+  first(V * θ)
 end
 
-function vandermonde(xs, d)
+function vandermonde(xs, deg)
   n = length(first(xs))
-  I = (multiexponents(n, d) for d in 0:d)
-  es = Iterators.flatten(I) |> collect
-  [prod(x .^ e) for x in xs, e in es]
+  iter = (multiexponents(n, d) for d in 0:deg)
+  exps = Iterators.flatten(iter) |> collect
+  [prod(x .^ e) for x in xs, e in exps]
 end

@@ -166,18 +166,18 @@ function fitpredictneigh(model, dat, dom, path, point, prob, minneighbors, maxne
     center = centroid(dom, ind)
 
     # find neighbors with data
-    nneigh = search!(neighbors, center, searcher)
+    n = search!(neighbors, center, searcher)
 
     # predict if enough neighbors
-    if nneigh ≥ minneighbors
+    if n ≥ minneighbors
       # final set of neighbors
-      ninds = view(neighbors, 1:nneigh)
+      ninds = view(neighbors, 1:n)
 
       # view neighborhood with data
-      samples = view(dat, ninds)
+      ndata = view(dat, ninds)
 
-      # fit model to samples
-      fmodel = fit(model, samples)
+      # fit model with neighborhood
+      fmodel = fit(model, ndata)
 
       # save prediction
       geom = point ? center : dom[ind]
