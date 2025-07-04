@@ -1,13 +1,13 @@
 @testset "IDW" begin
   @testset "Unitful" begin
-    d = georef((; z=[1.0, 0.0, 1.0]u"K"))
-    idw = GeoStatsModels.fit(IDW(), d)
+    data = georef((; z=[1.0, 0.0, 1.0]u"K"))
+    idw = GeoStatsModels.fit(IDW(), data)
     pred = GeoStatsModels.predict(idw, :z, Point(0.0))
     @test unit(pred) == u"K"
 
     # latlon coordinates
-    d = georef((; z=[1.0, 0.0, 1.0]), Point.([LatLon(0, 1), LatLon(0, 2), LatLon(0, 3)]))
-    idw = GeoStatsModels.fit(IDW(1, Haversine()), d)
+    data = georef((; z=[1.0, 0.0, 1.0]), Point.([LatLon(0, 1), LatLon(0, 2), LatLon(0, 3)]))
+    idw = GeoStatsModels.fit(IDW(1, Haversine()), data)
     pred = GeoStatsModels.predict(idw, :z, Point(LatLon(0, 1)))
     @test pred == 1
     pred = GeoStatsModels.predict(idw, :z, Point(LatLon(0, 2)))
@@ -17,15 +17,15 @@
   end
 
   @testset "CoDa" begin
-    d = georef((; z=[Composition(0.1, 0.2), Composition(0.3, 0.4), Composition(0.5, 0.6)]))
-    idw = GeoStatsModels.fit(IDW(), d)
+    data = georef((; z=[Composition(0.1, 0.2), Composition(0.3, 0.4), Composition(0.5, 0.6)]))
+    idw = GeoStatsModels.fit(IDW(), data)
     pred = GeoStatsModels.predict(idw, :z, Point(0.0))
     @test pred isa Composition
   end
 
   @testset "Fallbacks" begin
-    d = georef((; z=[1.0, 0.0, 1.0]), [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)])
-    idw = GeoStatsModels.fit(IDW(), d)
+    data = georef((; z=[1.0, 0.0, 1.0]), [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)])
+    idw = GeoStatsModels.fit(IDW(), data)
     pred1 = GeoStatsModels.predict(idw, :z, Point(0.0, 0.0))
     pred2 = GeoStatsModels.predict(idw, "z", Point(0.0, 0.0))
     pred3 = GeoStatsModels.predict(idw, (:z,), Point(0.0, 0.0))
