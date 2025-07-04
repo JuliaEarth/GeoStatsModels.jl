@@ -12,16 +12,17 @@ abstract type KrigingModel <: GeoStatsModel end
 Base.range(model::KrigingModel) = range(model.fun)
 
 """
-    KrigingState(data, LHS, RHS, ncon)
+    KrigingState(data, LHS, RHS, FHS, nfun, miss)
 
 A Kriging state stores information needed
 to perform estimation at any given geometry.
 """
-mutable struct KrigingState{D<:AbstractGeoTable,F,A}
+mutable struct KrigingState{D<:AbstractGeoTable,L,R,F}
   data::D
-  LHS::F
-  RHS::A
-  ncon::Int
+  LHS::L
+  RHS::R
+  FHS::F
+  nfun::Int
   miss::Vector{Int}
 end
 
@@ -46,50 +47,80 @@ struct FittedKriging{M<:KrigingModel,S<:KrigingState} <: FittedGeoStatsModel
   state::S
 end
 
-status(fitted::FittedKriging) = _status(fitted.state.LHS)
+status(fitted::FittedKriging) = _status(fitted.state.FHS)
 
-_status(LHS) = issuccess(LHS)
-_status(LHS::SVD) = true
+_status(FHS) = issuccess(FHS)
+_status(FHS::SVD) = true
 
 #--------------
 # FITTING STEP
 #--------------
 
 function fit(model::KrigingModel, data)
-  # initialize Kriging system
-  LHS, RHS, ncon, miss = initkrig(model, data)
+  # check compatibility of model and data
+  checkcompat(model, data)
+
+  # pre-allocate memory for LHS and RHS
+  LHS, RHS = prealloc(model, data)
+
+  # set LHS of Kriging system
+  nfun, miss = setlhs!(model, LHS, data)
 
   # factorize LHS
-  FLHS = lhsfactorize(model, LHS)
+  FHS = lhsfactorize(model, LHS)
 
   # record Kriging state
-  state = KrigingState(data, FLHS, RHS, ncon, miss)
+  state = KrigingState(data, LHS, RHS, FHS, nfun, miss)
 
   FittedKriging(model, state)
 end
 
-# initialize Kriging system
-function initkrig(model::KrigingModel, data)
+# make sure data is compatible with model
+function checkcompat(model::KrigingModel, data)
+  fun = model.fun
+  nvar = nvariates(fun)
+  nfeat = ncol(data) - 1
+  if nfeat != nvar
+    throw(ArgumentError("$nfeat data column(s) provided to $nvar-variate Kriging model"))
+  end
+end
+
+# pre-allocate memory for LHS and RHS
+function prealloc(model::KrigingModel, data)
   fun = model.fun
   dom = domain(data)
-  tab = values(data)
 
   # retrieve matrix parameters
   nobs = nelements(dom)
   nvar = nvariates(fun)
   ncon = nconstraints(model)
-  nrow = nobs * nvar + ncon
-
-  # make sure data is compatible with model
-  nfeat = ncol(data) - 1
-  if nfeat != nvar
-    throw(ArgumentError("$nfeat data column(s) provided to $nvar-variate Kriging model"))
-  end
+  nfun = nobs * nvar
+  nrow = nfun + ncon
 
   # pre-allocate memory for LHS
   F = fun(dom[1], dom[1])
   V = eltype(ustrip.(F))
   LHS = Matrix{V}(undef, nrow, nrow)
+
+  # pre-allocate memory for RHS
+  RHS = similar(LHS, nrow, nvar)
+
+  LHS, RHS
+end
+
+# set LHS of Kriging system
+function setlhs!(model::KrigingModel, LHS, data)
+  fun = model.fun
+  dom = domain(data)
+  tab = values(data)
+
+  # number of function evaluations
+  nobs = nelements(dom)
+  nvar = nvariates(fun)
+  nfun = nobs * nvar
+
+  # find locations with missing values
+  miss = missingindices(tab)
 
   # set main block with pairwise evaluation
   GeoStatsFunctions.pairwise!(LHS, fun, dom)
@@ -98,20 +129,13 @@ function initkrig(model::KrigingModel, data)
   if isstationary(fun) && !isbanded(fun)
     lhsbanded!(LHS, fun, dom)
   end
-
   # set blocks of constraints
   lhsconstraints!(model, LHS, dom)
 
-  # find locations with missing values
-  miss = missingindices(tab)
-
   # knock out entries with missing values
-  lhsmissings!(LHS, ncon, miss)
+  lhsmissings!(LHS, nfun, miss)
 
-  # pre-allocate memory for RHS
-  RHS = similar(LHS, nrow, nvar)
-
-  LHS, RHS, ncon, miss
+  nfun, miss
 end
 
 # choose appropriate factorization of LHS
@@ -143,7 +167,7 @@ function lhsbanded!(LHS, fun, dom)
 
   # retrieve matrix paramaters
   nobs = nelements(dom)
-  nvar = size(S, 1)
+  nvar = nvariates(fun)
   nfun = nobs * nvar
 
   @inbounds for j in 1:nfun, i in 1:nfun
@@ -172,9 +196,7 @@ function missingindices(tab)
 end
 
 # knock out entries with missing values
-function lhsmissings!(LHS, ncon, miss)
-  nrow = size(LHS, 1)
-  nfun = nrow - ncon
+function lhsmissings!(LHS, nfun, miss)
   @inbounds for j in miss, i in 1:nfun
     LHS[i, j] = 0
   end
@@ -239,8 +261,14 @@ end
 ⦿(λ, z::Missing) = 0
 
 function predictvar(fitted::FittedKriging, weights::KrigingWeights, gₒ)
+  model = fitted.model
   RHS = fitted.state.RHS
-  fun = fitted.model.fun
+  nfun = fitted.state.nfun
+  ncon = nconstraints(model)
+  nrow = nfun + ncon
+
+  # geostatistical function
+  fun = model.fun
 
   # covariance formula for given function
   Σ = krigvar(fun, weights, RHS, gₒ)
@@ -283,19 +311,39 @@ function wmul(weights::KrigingWeights, RHS)
   Kλ, Kν
 end
 
+# solve Kriging system at target geometry
 function weights(fitted::FittedKriging, gₒ)
-  LHS = fitted.state.LHS
+  data = fitted.state.data
+  FHS = fitted.state.FHS
   RHS = fitted.state.RHS
-  ncon = fitted.state.ncon
-  miss = fitted.state.miss
-  dom = domain(fitted.state.data)
-  fun = fitted.model.fun
+  nfun = fitted.state.nfun
+
+  # retrieve domain of data
+  dom = domain(data)
 
   # adjust CRS of gₒ
   gₒ′ = gₒ |> Proj(crs(dom))
 
+  # set RHS of Kriging system
+  setrhs!(fitted, RHS, dom, gₒ′)
+
+  # solve Kriging system
+  W = FHS \ RHS
+
+  # split weights and Lagrange multipliers
+  λ = @view W[begin:nfun, :]
+  ν = @view W[(nfun+1):end, :]
+
+  KrigingWeights(λ, ν)
+end
+
+# set RHS of Kriging system
+function setrhs!(fitted::FittedKriging, RHS, dom, gₒ)
+  fun = fitted.model.fun
+  miss = fitted.state.miss
+
   # set main blocks with pairwise evaluation
-  GeoStatsFunctions.pairwise!(RHS, fun, dom, [gₒ′])
+  GeoStatsFunctions.pairwise!(RHS, fun, dom, [gₒ])
 
   # adjustments for numerical stability
   if isstationary(fun) && !isbanded(fun)
@@ -303,22 +351,12 @@ function weights(fitted::FittedKriging, gₒ)
   end
 
   # set blocks of constraints
-  rhsconstraints!(fitted, gₒ′)
+  rhsconstraints!(fitted, gₒ)
 
   # knock out entries with missing values
   rhsmissings!(RHS, miss)
 
-  # solve Kriging system
-  W = LHS \ RHS
-
-  # index of first constraint
-  ind = size(LHS, 1) - ncon + 1
-
-  # split weights and Lagrange multipliers
-  λ = @view W[begin:(ind - 1), :]
-  ν = @view W[ind:end, :]
-
-  KrigingWeights(λ, ν)
+  nothing
 end
 
 # convert RHS into banded matrix
@@ -328,7 +366,7 @@ function rhsbanded!(RHS, fun, dom)
 
   # retrieve matrix paramaters
   nobs = nelements(dom)
-  nvar = size(S, 1)
+  nvar = nvariates(fun)
   nfun = nobs * nvar
 
   @inbounds for j in 1:nvar, i in 1:nfun
