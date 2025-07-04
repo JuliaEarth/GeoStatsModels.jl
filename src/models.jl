@@ -11,6 +11,25 @@ of a geospatial domain near other geometries with samples.
 abstract type GeoStatsModel end
 
 """
+    range(model)
+
+Return the range of the geostatistical `model`, which is the
+characteristic length after which the model ignores any data.
+
+For example, the Kriging model has the same range of the
+underlying geostatistical function.
+"""
+Base.range(::GeoStatsModel) = Inf * u"m"
+
+"""
+    scale(model, factor)
+
+Scale the geostatistical `model` with a strictly positive
+scaling `factor`.
+"""
+scale(model, _) = model
+
+"""
     fit(model, geotable)
 
 Fit geostatistical `model` to `geotable` and return a fitted
@@ -83,7 +102,7 @@ variables on `domain` using a set of `options`.
 """
 function fitpredict(
   model::GeoStatsModel,
-  gtb::AbstractGeoTable,
+  dat::AbstractGeoTable,
   dom::Domain;
   path=LinearPath(),
   point=true,
@@ -95,21 +114,25 @@ function fitpredict(
   distance=Euclidean()
 )
   # point or volume support
-  sdom = point ? pointsupport(domain(gtb)) : domain(gtb)
+  pdat = point ? _pointsupport(dat) : dat
 
-  # adjusted geotable
-  gtb′ = georef(values(gtb), sdom)
+  # scale objects for numerical stability
+  smodel, sdat, sdom, sneigh = _scale(model, pdat, dom, neighborhood)
 
-  if neighbors
-    fitpredictneigh(model, gtb′, dom, path, point, prob, minneighbors, maxneighbors, neighborhood, distance)
+  # choose between full and neighbor-based algorithm
+  pred = if neighbors
+    fitpredictneigh(smodel, sdat, sdom, path, point, prob, minneighbors, maxneighbors, sneigh, distance)
   else
-    fitpredictfull(model, gtb′, dom, path, point, prob)
+    fitpredictfull(smodel, sdat, sdom, path, point, prob)
   end
+
+  # georeference over original domain
+  georef(pred, dom)
 end
 
-function fitpredictneigh(model, gtb, dom, path, point, prob, minneighbors, maxneighbors, neighborhood, distance)
+function fitpredictneigh(model, dat, dom, path, point, prob, minneighbors, maxneighbors, neighborhood, distance)
   # fix neighbors limits
-  nobs = nrow(gtb)
+  nobs = nrow(dat)
   if maxneighbors > nobs || maxneighbors < 1
     maxneighbors = nobs
   end
@@ -120,10 +143,10 @@ function fitpredictneigh(model, gtb, dom, path, point, prob, minneighbors, maxne
   # determine bounded search method
   searcher = if isnothing(neighborhood)
     # nearest neighbor search with a metric
-    KNearestSearch(domain(gtb), maxneighbors; metric=distance)
+    KNearestSearch(domain(dat), maxneighbors; metric=distance)
   else
     # neighbor search with ball neighborhood
-    KBallSearch(domain(gtb), maxneighbors, neighborhood)
+    KBallSearch(domain(dat), maxneighbors, neighborhood)
   end
 
   # pre-allocate memory for neighbors
@@ -141,7 +164,7 @@ function fitpredictneigh(model, gtb, dom, path, point, prob, minneighbors, maxne
   predfun = prob ? _marginals ∘ predictprob : predict
 
   # predict variables
-  cols = Tables.columns(values(gtb))
+  cols = Tables.columns(values(dat))
   vars = Tables.columnnames(cols)
   pred = @inbounds map(inds) do ind
     # centroid of estimation
@@ -156,10 +179,10 @@ function fitpredictneigh(model, gtb, dom, path, point, prob, minneighbors, maxne
       ninds = view(neighbors, 1:n)
 
       # view neighborhood with data
-      ndata = view(gtb, ninds)
+      ndata = view(dat, ninds)
 
-      # fit model to neighborhood
-      fit!(fmodel, ndata)
+      # fit model with neighborhood
+      fmodel = fit(model, ndata)
 
       # save prediction
       geom = point ? center : dom[ind]
@@ -172,12 +195,10 @@ function fitpredictneigh(model, gtb, dom, path, point, prob, minneighbors, maxne
   end
 
   # convert to original table type
-  predtab = pred |> Tables.materializer(values(gtb))
-
-  georef(predtab, dom)
+  pred |> Tables.materializer(values(dat))
 end
 
-function fitpredictfull(model, gtb, dom, path, point, prob)
+function fitpredictfull(model, dat, dom, path, point, prob)
   # traverse domain with given path
   inds = traverse(dom, path)
 
@@ -185,10 +206,10 @@ function fitpredictfull(model, gtb, dom, path, point, prob)
   predfun = prob ? _marginals ∘ predictprob : predict
 
   # fit model to data
-  fmodel = fit(model, gtb)
+  fmodel = fit(model, dat)
 
   # predict variables
-  cols = Tables.columns(values(gtb))
+  cols = Tables.columns(values(dat))
   vars = Tables.columnnames(cols)
   pred = @inbounds map(inds) do ind
     geom = point ? centroid(dom, ind) : dom[ind]
@@ -197,13 +218,8 @@ function fitpredictfull(model, gtb, dom, path, point, prob)
   end
 
   # convert to original table type
-  predtab = pred |> Tables.materializer(values(gtb))
-
-  georef(predtab, dom)
+  pred |> Tables.materializer(values(dat))
 end
-
-_marginals(dist::UnivariateDistribution) = (dist,)
-_marginals(dist::MvNormal) = Normal.(mean(dist), var(dist))
 
 # ----------------
 # IMPLEMENTATIONS
@@ -219,4 +235,38 @@ include("krig.jl")
 # HELPER FUNCTIONS
 # -----------------
 
-pointsupport(dom) = PointSet(centroid(dom, i) for i in 1:nelements(dom))
+function _pointsupport(dat)
+  tab = values(dat)
+  dom = domain(dat)
+  pset = PointSet(centroid(dom, i) for i in 1:nelements(dom))
+  georef(tab, pset)
+end
+
+function _scale(model, dat, dom, neigh)
+  α₁ = _scalefactor(model)
+  α₂ = _scalefactor(domain(dat))
+  α₃ = _scalefactor(dom)
+  α = inv(max(α₁, α₂, α₃))
+
+  smodel = GeoStatsModels.scale(model, α)
+  sdat = dat |> Scale(α)
+  sdom = dom |> Scale(α)
+  sneigh = isnothing(neigh) ? nothing : α * neigh
+
+  smodel, sdat, sdom, sneigh
+end
+
+function _scalefactor(domain::Domain)
+  pmin, pmax = extrema(boundingbox(domain))
+  cmin = abs.(to(pmin))
+  cmax = abs.(to(pmax))
+  ustrip(max(cmin..., cmax...))
+end
+
+function _scalefactor(model::GeoStatsModel)
+  r = ustrip(range(model))
+  isinf(r) ? one(r) : r
+end
+
+_marginals(dist::UnivariateDistribution) = (dist,)
+_marginals(dist::MvNormal) = Normal.(mean(dist), var(dist))

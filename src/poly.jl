@@ -13,7 +13,7 @@ end
 
 Polynomial() = Polynomial(1)
 
-mutable struct PolynomialState{D<:AbstractGeoTable,P}
+struct PolynomialState{D<:AbstractGeoTable,P}
   data::D
   proj::P
 end
@@ -41,31 +41,6 @@ function fit(model::Polynomial, data)
 
   # return fitted model
   FittedPolynomial(model, state)
-end
-
-function fit!(fitted::FittedPolynomial, newdata)
-  model = fitted.model
-  state = fitted.state
-
-  # check compatibility of data size
-  checkdatasize(fitted, newdata)
-
-  # update state data
-  state.data = newdata
-
-  # set coordinate matrix
-  setproj!(model, state.proj, newdata)
-
-  nothing
-end
-
-function checkdatasize(fitted::FittedPolynomial, data)
-  proj = fitted.state.proj
-  nproj = size(proj, 2)
-  nobs = nrow(data)
-  if nobs > nproj
-    throw(ArgumentError("in-place fit called with $nobs data row(s) and $nproj maximum size"))
-  end
 end
 
 function prealloc(model::Polynomial, data)
@@ -98,7 +73,7 @@ function setproj!(model::Polynomial, proj, data)
   V = vandermonde(xs, deg)
 
   # set regression matrix
-  proj[:, 1:nelements(dom)] .= (transpose(V) * V) \ transpose(V)
+  proj .= (transpose(V) * V) \ transpose(V)
 
   nothing
 end
@@ -112,6 +87,7 @@ predict(fitted::FittedPolynomial, var::Symbol, gₒ) = evalpoly(fitted, var, g�
 predictprob(fitted::FittedPolynomial, var::Symbol, gₒ) = Dirac(predict(fitted, var, gₒ))
 
 function evalpoly(fitted::FittedPolynomial, var, gₒ)
+  # retrieve degree and data
   deg = fitted.model.degree
   data = fitted.state.data
 
@@ -125,7 +101,7 @@ function evalpoly(fitted::FittedPolynomial, var, gₒ)
   V = vandermonde((xₒ,), deg)
 
   # regression coefficients
-  P = @view fitted.state.proj[:, 1:nrow(data)]
+  P = fitted.state.proj
   c = Tables.columns(values(data))
   z = Tables.getcolumn(c, var)
   θ = P * z
@@ -135,7 +111,7 @@ end
 
 function vandermonde(xs, deg)
   n = length(first(xs))
-  I = (multiexponents(n, d) for d in 0:deg)
-  es = Iterators.flatten(I) |> collect
-  [prod(x .^ e) for x in xs, e in es]
+  iter = (multiexponents(n, d) for d in 0:deg)
+  exps = Iterators.flatten(iter) |> collect
+  [prod(x .^ e) for x in xs, e in exps]
 end

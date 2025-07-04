@@ -58,45 +58,20 @@ function fit(model::LWR, data)
   FittedLWR(model, state)
 end
 
-function fit!(fitted::FittedLWR, newdata)
-  model = fitted.model
-  state = fitted.state
-
-  # check compatibility of data size
-  checkdatasize(fitted, newdata)
-
-  # update state data
-  state.data = newdata
-
-  # set coordinate matrix
-  setx!(model, state.X, newdata)
-
-  nothing
-end
-
-function checkdatasize(fitted::FittedLWR, data)
-  X = fitted.state.X
-  nx = size(X, 1)
-  nobs = nrow(data)
-  if nobs > nx
-    throw(ArgumentError("in-place fit called with $nobs data row(s) and $nx maximum size"))
-  end
-end
-
 function prealloc(::LWR, data)
   dom = domain(data)
   nobs = nelements(dom)
   x = CoordRefSystems.raw(coords(centroid(dom, 1)))
-  X = Matrix{eltype(x)}(undef, nobs, length(x) + 1)
-  X[:, 1] .= 1
-  X
+  Matrix{eltype(x)}(undef, nobs, length(x) + 1)
 end
 
 function setx!(::LWR, X, data)
   dom = domain(data)
+  nobs = nelements(dom)
   x(i) = CoordRefSystems.raw(coords(centroid(dom, i)))
-  @inbounds for i in 1:nelements(dom)
-    X[i, (begin + 1):end] .= x(i)
+  @inbounds for i in 1:nobs
+    X[i, 1] = oneunit(eltype(X))
+    X[i, 2:end] .= x(i)
   end
 end
 

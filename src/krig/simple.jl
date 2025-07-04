@@ -9,7 +9,7 @@ Simple Kriging with geostatistical function `fun` and constant `mean`.
 
 ### Notes
 
-* Simple Kriging requires stationary geostatistical function
+Simple Kriging requires stationary geostatistical function.
 """
 struct SimpleKriging{F<:GeoStatsFunction,M<:AbstractVector} <: KrigingModel
   # input fields
@@ -25,6 +25,8 @@ end
 SimpleKriging(fun::F, mean::M) where {F<:GeoStatsFunction,M<:AbstractVector} = SimpleKriging{F,M}(fun, mean)
 
 SimpleKriging(fun, mean) = SimpleKriging(fun, [mean])
+
+scale(model::SimpleKriging, α) = SimpleKriging(GeoStatsFunctions.scale(model.fun, α), model.mean)
 
 nconstraints(::SimpleKriging) = 0
 

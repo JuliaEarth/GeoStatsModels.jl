@@ -15,9 +15,11 @@ for `dim` geospatial coordinates.
 
 ### Notes
 
-* Drift functions should be smooth for numerical stability
-* Include a constant drift (e.g. `p -> 1`) for unbiased estimation
-* [`OrdinaryKriging`](@ref) is recovered with `drifts = [p -> 1]`
+Drift functions should be smooth for numerical stability.
+
+Include a constant drift (e.g. `p -> 1`) for unbiased estimation.
+
+[`OrdinaryKriging`](@ref) is recovered with `drifts = [p -> 1]`.
 """
 struct UniversalKriging{F<:GeoStatsFunction,D} <: KrigingModel
   fun::F
@@ -25,6 +27,8 @@ struct UniversalKriging{F<:GeoStatsFunction,D} <: KrigingModel
 end
 
 UniversalKriging(fun::GeoStatsFunction, deg::Int, dim::Int) = UniversalKriging(fun, monomials(deg, dim))
+
+scale(model::UniversalKriging, α) = UniversalKriging(GeoStatsFunctions.scale(model.fun, α), model.drifts)
 
 function monomials(deg::Int, dim::Int)
   # sanity checks
