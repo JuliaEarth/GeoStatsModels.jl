@@ -59,18 +59,15 @@ nconstraints(model::UniversalKriging) = nvariates(model.fun) * length(model.drif
 
 function lhsconstraints!(model::UniversalKriging, LHS::AbstractMatrix, domain)
   drifts = model.drifts
-
-  # number of variables
+  nobs = nelements(domain)
   nvar = nvariates(model.fun)
-
-  # number of constraints
   ncon = nconstraints(model)
-
-  # retrieve size of LHS
-  nrow, ncol = size(LHS)
+  nfun = nobs * nvar
+  nrow = nfun + ncon
+  ncol = nrow
 
   # index of first constraint
-  ind = nrow - ncon + 1
+  ind = nfun + 1
 
   # set drift blocks
   @inbounds for e in 1:nelements(domain)
@@ -96,14 +93,13 @@ end
 
 function rhsconstraints!(fitted::FittedKriging{<:UniversalKriging}, gₒ)
   RHS = fitted.state.RHS
-  ncon = fitted.state.ncon
   drifts = fitted.model.drifts
-
-  # retrieve size of RHS
-  nrow, ncol = size(RHS)
+  nvar = nvariates(fitted.model.fun)
+  nfun = fitted.state.nfun
+  ncol = nvar
 
   # index of first constraint
-  ind = nrow - ncon + 1
+  ind = nfun + 1
 
   # target point
   pₒ = centroid(gₒ)
