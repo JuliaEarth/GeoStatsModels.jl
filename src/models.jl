@@ -159,17 +159,20 @@ function fitpredictneigh(model, dat, dom, point, prob, minneighbors, maxneighbor
   end
 
   # pre-allocate memory for neighbors
-  neighbors = Vector{Int}(undef, maxneighbors)
+  neighbors = [Vector{Int}(undef, maxneighbors) for _ in 1:Threads.nthreads()]
 
   # prediction at index
   function prediction(ind)
+    # neighbors in current thread
+    nbh = neighbors[Threads.threadid()]
+
     # find neighbors with data
-    n = search!(neighbors, centroid(dom, ind), searcher)
+    n = search!(nbh, centroid(dom, ind), searcher)
 
     # predict if enough neighbors
     vals = if n ≥ minneighbors
       # view neighborhood with data
-      ninds = view(neighbors, 1:n)
+      ninds = view(nbh, 1:n)
       ndata = view(dat, ninds)
 
       # fit model with neighborhood
@@ -187,7 +190,11 @@ function fitpredictneigh(model, dat, dom, point, prob, minneighbors, maxneighbor
   end
 
   # perform prediction
-  preds = _predictionserial(prediction, inds)
+  preds = if isthreaded()
+    _predictionthread(prediction, inds)
+  else
+    _predictionserial(prediction, inds)
+  end
 
   # convert to original table type
   preds |> Tables.materializer(values(dat))
