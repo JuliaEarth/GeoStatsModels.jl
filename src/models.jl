@@ -236,12 +236,11 @@ _predictionserial(prediction, inds) = map(prediction, inds)
 
 function _predictionthread(prediction, inds)
   pinds = collect(inds)
-  ptype = typeof(prediction(first(pinds)))
-  preds = Vector{ptype}(undef, length(pinds))
+  preds = Vector{Any}(undef, length(pinds))
   Threads.@threads for i in eachindex(pinds)
     preds[i] = prediction(pinds[i])
   end
-  preds
+  map(identity, preds)
 end
 
 # ----------------
