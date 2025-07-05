@@ -19,6 +19,7 @@ using Tables
 using LinearAlgebra: QRIteration
 
 include("models.jl")
+include("utils.jl")
 
 export
   # models

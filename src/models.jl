@@ -91,7 +91,6 @@ variables on `domain` using a set of `options`.
 
 ## Options
 
-* `path`         - Path over the domain (default to `LinearPath()`)
 * `point`        - Perform interpolation on point support (default to `true`)
 * `prob`         - Perform probabilistic interpolation (default to `false`)
 * `neighbors`    - Whether or not to use neighborhood (default to `true`)
@@ -104,7 +103,6 @@ function fitpredict(
   model::GeoStatsModel,
   dat::AbstractGeoTable,
   dom::Domain;
-  path=LinearPath(),
   point=true,
   prob=false,
   neighbors=true,
@@ -121,16 +119,27 @@ function fitpredict(
 
   # choose between full and neighbor-based algorithm
   pred = if neighbors
-    fitpredictneigh(smodel, sdat, sdom, path, point, prob, minneighbors, maxneighbors, sneigh, distance)
+    fitpredictneigh(smodel, sdat, sdom, point, prob, minneighbors, maxneighbors, sneigh, distance)
   else
-    fitpredictfull(smodel, sdat, sdom, path, point, prob)
+    fitpredictfull(smodel, sdat, sdom, point, prob)
   end
 
   # georeference over original domain
   georef(pred, dom)
 end
 
-function fitpredictneigh(model, dat, dom, path, point, prob, minneighbors, maxneighbors, neighborhood, distance)
+function fitpredictneigh(model, dat, dom, point, prob, minneighbors, maxneighbors, neighborhood, distance)
+  # prediction function
+  predfun = prob ? _marginals ∘ predictprob : predict
+
+  # geometry function
+  getgeom(dom, ind) = @inbounds (point ? centroid(dom, ind) : dom[ind])
+
+  # variables and indices to predict
+  cols = Tables.columns(values(dat))
+  vars = Tables.columnnames(cols)
+  inds = 1:nelements(dom)
+
   # fix neighbors limits
   nobs = nrow(dat)
   if maxneighbors > nobs || maxneighbors < 1
@@ -150,70 +159,88 @@ function fitpredictneigh(model, dat, dom, path, point, prob, minneighbors, maxne
   end
 
   # pre-allocate memory for neighbors
-  neighbors = Vector{Int}(undef, maxneighbors)
+  neighbors = [Vector{Int}(undef, maxneighbors) for _ in 1:Threads.nthreads()]
 
-  # traverse domain with given path
-  inds = traverse(dom, path)
-
-  # prediction function
-  predfun = prob ? _marginals ∘ predictprob : predict
-
-  # predict variables
-  cols = Tables.columns(values(dat))
-  vars = Tables.columnnames(cols)
-  pred = @inbounds map(inds) do ind
-    # centroid of estimation
-    center = centroid(dom, ind)
+  # prediction at index
+  function prediction(ind)
+    # neighbors in current thread
+    tneighbors = neighbors[Threads.threadid()]
 
     # find neighbors with data
-    n = search!(neighbors, center, searcher)
+    n = search!(tneighbors, centroid(dom, ind), searcher)
 
     # predict if enough neighbors
-    if n ≥ minneighbors
-      # final set of neighbors
-      ninds = view(neighbors, 1:n)
-
+    vals = if n ≥ minneighbors
       # view neighborhood with data
+      ninds = view(tneighbors, 1:n)
       ndata = view(dat, ninds)
 
       # fit model with neighborhood
       fmodel = fit(model, ndata)
 
-      # save prediction
-      geom = point ? center : dom[ind]
-      vals = predfun(fmodel, vars, geom)
+      # make prediction
+      geom = getgeom(dom, ind)
+      predfun(fmodel, vars, geom)
     else
       # missing prediction
-      vals = fill(missing, length(vars))
+      fill(missing, length(vars))
     end
+
     (; zip(vars, vals)...)
   end
 
+  # perform prediction
+  preds = if isthreaded()
+    _predictionthread(prediction, inds)
+  else
+    _predictionserial(prediction, inds)
+  end
+
   # convert to original table type
-  pred |> Tables.materializer(values(dat))
+  preds |> Tables.materializer(values(dat))
 end
 
-function fitpredictfull(model, dat, dom, path, point, prob)
-  # traverse domain with given path
-  inds = traverse(dom, path)
-
+function fitpredictfull(model, dat, dom, point, prob)
   # prediction function
   predfun = prob ? _marginals ∘ predictprob : predict
+
+  # geometry function
+  getgeom(dom, ind) = @inbounds (point ? centroid(dom, ind) : dom[ind])
+
+  # variables and indices to predict
+  cols = Tables.columns(values(dat))
+  vars = Tables.columnnames(cols)
+  inds = 1:nelements(dom)
 
   # fit model to data
   fmodel = fit(model, dat)
 
-  # predict variables
-  cols = Tables.columns(values(dat))
-  vars = Tables.columnnames(cols)
-  pred = @inbounds map(inds) do ind
-    geom = point ? centroid(dom, ind) : dom[ind]
+  # prediction at index
+  function prediction(ind)
+    geom = getgeom(dom, ind)
     vals = predfun(fmodel, vars, geom)
     (; zip(vars, vals)...)
   end
 
+  # perform prediction
+  preds = if isthreaded()
+    _predictionthread(prediction, inds)
+  else
+    _predictionserial(prediction, inds)
+  end
+
   # convert to original table type
-  pred |> Tables.materializer(values(dat))
+  preds |> Tables.materializer(values(dat))
+end
+
+_predictionserial(prediction, inds) = map(prediction, inds)
+
+function _predictionthread(prediction, inds)
+  preds = Vector{Any}(undef, length(inds))
+  Threads.@threads for ind in inds
+    preds[ind] = prediction(ind)
+  end
+  map(identity, preds)
 end
 
 # ----------------

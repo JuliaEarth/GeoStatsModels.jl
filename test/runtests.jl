@@ -12,7 +12,7 @@ using Statistics
 using Test, StableRNGs
 
 # list of tests
-testfiles = ["nn.jl", "idw.jl", "lwr.jl", "poly.jl", "krig.jl", "misc.jl"]
+testfiles = ["nn.jl", "idw.jl", "lwr.jl", "poly.jl", "krig.jl", "misc.jl", "utils.jl"]
 
 @testset "GeoStatsModels.jl" begin
   for testfile in testfiles
