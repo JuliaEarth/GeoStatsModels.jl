@@ -233,8 +233,7 @@ end
 _predictionserial(prediction, inds) = map(prediction, inds)
 
 function _predictionthread(prediction, inds)
-  ninds = length(collect(inds))
-  preds = Vector{Any}(undef, ninds)
+  preds = Vector{Any}(undef, length(inds))
   Threads.@threads for ind in inds
     preds[ind] = prediction(ind)
   end
