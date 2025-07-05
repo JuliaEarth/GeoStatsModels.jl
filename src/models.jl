@@ -49,7 +49,7 @@ abstract type FittedGeoStatsModel end
     predict(model, vars, gₒ)
 
 Predict one or multiple variables `vars` at geometry `gₒ` with
-given geostatistical `model`.
+fitted geostatistical `model`.
 """
 predict(model::FittedGeoStatsModel, var::AbstractString, gₒ) = predict(model, Symbol(var), gₒ)
 function predict(model::FittedGeoStatsModel, vars, gₒ)
@@ -64,7 +64,7 @@ end
     predictprob(model, vars, gₒ)
 
 Predict distribution of one or multiple variables `vars` at
-geometry `gₒ` with given geostatistical `model`.
+geometry `gₒ` with fitted geostatistical `model`.
 """
 predictprob(model::FittedGeoStatsModel, var::AbstractString, gₒ) = predictprob(model, Symbol(var), gₒ)
 function predictprob(model::FittedGeoStatsModel, vars, gₒ)

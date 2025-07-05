@@ -54,7 +54,7 @@
   data = georef((; z=[1.0, 0.0, 1.0]), [(25.0, 25.0), (50.0, 75.0), (75.0, 50.0)])
   grid = CartesianGrid(100, 100)
   for model in [NN(), IDW(), LWR(), Polynomial(), Kriging(SphericalVariogram())]
-    pred = GeoStatsModels.fitpredict(model, data, grid, maxneighbors=3)
+    pred = GeoStatsModels.fitpredict(model, data, grid, neighbors=true)
     @test pred.geometry == grid
   end
 end
