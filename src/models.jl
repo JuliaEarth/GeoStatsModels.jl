@@ -187,11 +187,7 @@ function fitpredictneigh(model, dat, dom, point, prob, minneighbors, maxneighbor
   end
 
   # perform prediction
-  preds = if isthreaded()
-    _predictionthread(prediction, inds)
-  else
-    _predictionserial(prediction, inds)
-  end
+  preds = _predictionserial(prediction, inds)
 
   # convert to original table type
   preds |> Tables.materializer(values(dat))
