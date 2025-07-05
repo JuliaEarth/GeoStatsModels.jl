@@ -10,7 +10,7 @@
   vpred = GeoStatsModels.fitpredict(model, vdata, pset, neighbors=false)
   @test vpred == pred
 
-  # fitpredict with Kriging (without neighbors)
+  # fitpredict with Kriging
   model = Kriging(SphericalVariogram(range=35.0))
   data = georef((; z=[1.0, 0.0, 1.0]), [(25.0, 25.0), (50.0, 75.0), (75.0, 50.0)])
   grid = CartesianGrid((100, 100), (0.5, 0.5), (1.0, 1.0))
