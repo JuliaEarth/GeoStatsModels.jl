@@ -91,7 +91,6 @@ variables on `domain` using a set of `options`.
 
 ## Options
 
-* `path`         - Path over the domain (default to `LinearPath()`)
 * `point`        - Perform interpolation on point support (default to `true`)
 * `prob`         - Perform probabilistic interpolation (default to `false`)
 * `neighbors`    - Whether or not to use neighborhood (default to `true`)
@@ -104,7 +103,6 @@ function fitpredict(
   model::GeoStatsModel,
   dat::AbstractGeoTable,
   dom::Domain;
-  path=LinearPath(),
   point=true,
   prob=false,
   neighbors=true,
@@ -121,16 +119,16 @@ function fitpredict(
 
   # choose between full and neighbor-based algorithm
   pred = if neighbors
-    fitpredictneigh(smodel, sdat, sdom, path, point, prob, minneighbors, maxneighbors, sneigh, distance)
+    fitpredictneigh(smodel, sdat, sdom, point, prob, minneighbors, maxneighbors, sneigh, distance)
   else
-    fitpredictfull(smodel, sdat, sdom, path, point, prob)
+    fitpredictfull(smodel, sdat, sdom, point, prob)
   end
 
   # georeference over original domain
   georef(pred, dom)
 end
 
-function fitpredictneigh(model, dat, dom, path, point, prob, minneighbors, maxneighbors, neighborhood, distance)
+function fitpredictneigh(model, dat, dom, point, prob, minneighbors, maxneighbors, neighborhood, distance)
   # prediction function
   predfun = prob ? _marginals ∘ predictprob : predict
 
@@ -140,7 +138,7 @@ function fitpredictneigh(model, dat, dom, path, point, prob, minneighbors, maxne
   # variables and indices to predict
   cols = Tables.columns(values(dat))
   vars = Tables.columnnames(cols)
-  inds = traverse(dom, path)
+  inds = 1:nelements(dom)
 
   # fix neighbors limits
   nobs = nrow(dat)
@@ -199,7 +197,7 @@ function fitpredictneigh(model, dat, dom, path, point, prob, minneighbors, maxne
   preds |> Tables.materializer(values(dat))
 end
 
-function fitpredictfull(model, dat, dom, path, point, prob)
+function fitpredictfull(model, dat, dom, point, prob)
   # prediction function
   predfun = prob ? _marginals ∘ predictprob : predict
 
@@ -209,7 +207,7 @@ function fitpredictfull(model, dat, dom, path, point, prob)
   # variables and indices to predict
   cols = Tables.columns(values(dat))
   vars = Tables.columnnames(cols)
-  inds = traverse(dom, path)
+  inds = 1:nelements(dom)
 
   # fit model to data
   fmodel = fit(model, dat)
