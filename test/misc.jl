@@ -25,11 +25,11 @@
   @test isapprox(pred.z[inds[75, 50]], 1.0, atol=1e-3)
 
   # fitpredict with multiple variables and CoKriging
+  model = Kriging([1.0 0.3 0.1; 0.3 1.0 0.2; 0.1 0.2 1.0] * SphericalVariogram(range=35.0))
   data = georef((; a=[1.0, 0.0, 0.0], b=[0.0, 1.0, 0.0], c=[0.0, 0.0, 1.0]), [(25.0, 25.0), (50.0, 75.0), (75.0, 50.0)])
   grid = CartesianGrid((100, 100), (0.5, 0.5), (1.0, 1.0))
-  model = Kriging([1.0 0.3 0.1; 0.3 1.0 0.2; 0.1 0.2 1.0] * SphericalVariogram(range=35.0))
-  pred = GeoStatsModels.fitpredict(model, data, grid, neighbors=true)
   inds = LinearIndices(size(grid))
+  pred = GeoStatsModels.fitpredict(model, data, grid, neighbors=true)
   @test isapprox(pred.a[inds[25, 25]], 1.0, atol=1e-3)
   @test isapprox(pred.a[inds[50, 75]], 0.0, atol=1e-3)
   @test isapprox(pred.a[inds[75, 50]], 0.0, atol=1e-3)
@@ -53,8 +53,7 @@
   # fitpredict with neighbors
   data = georef((; z=[1.0, 0.0, 1.0]), [(25.0, 25.0), (50.0, 75.0), (75.0, 50.0)])
   grid = CartesianGrid(100, 100)
-  models = [NN(), IDW(), LWR(), Polynomial(), Kriging(SphericalVariogram())]
-  for model in models
+  for model in [NN(), IDW(), LWR(), Polynomial(), Kriging(SphericalVariogram())]
     pred = GeoStatsModels.fitpredict(model, data, grid, maxneighbors=3)
     @test pred.geometry == grid
   end
