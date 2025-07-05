@@ -214,16 +214,22 @@ function fitpredictfull(model, dat, dom, point, prob)
 
   # fit model to data
   fmodel = fit(model, dat)
+  fitted = [deepcopy(fmodel) for _ in 1:Threads.nthreads()]
 
   # prediction at index
   function prediction(ind)
+    fmod = fitted[Threads.threadid()]
     geom = getgeom(dom, ind)
-    vals = predfun(fmodel, vars, geom)
+    vals = predfun(fmod, vars, geom)
     (; zip(vars, vals)...)
   end
 
   # perform prediction
-  preds = _predictionserial(prediction, inds)
+  preds = if isthreaded()
+    _predictionthread(prediction, inds)
+  else
+    _predictionserial(prediction, inds)
+  end
 
   # convert to original table type
   preds |> Tables.materializer(values(dat))
