@@ -194,23 +194,29 @@ function fitpredictneigh(model, dat, dom, path, point, prob, minneighbors, maxne
 end
 
 function fitpredictfull(model, dat, dom, path, point, prob)
-  # traverse domain with given path
-  inds = traverse(dom, path)
-
   # prediction function
   predfun = prob ? _marginals ∘ predictprob : predict
+
+  # geometry function
+  getgeom(dom, ind) = @inbounds (point ? centroid(dom, ind) : dom[ind])
+
+  # variables and indices to predict
+  cols = Tables.columns(values(dat))
+  vars = Tables.columnnames(cols)
+  inds = traverse(dom, path)
 
   # fit model to data
   fmodel = fit(model, dat)
 
-  # predict variables
-  cols = Tables.columns(values(dat))
-  vars = Tables.columnnames(cols)
-  pred = @inbounds map(inds) do ind
-    geom = point ? centroid(dom, ind) : dom[ind]
+  # prediction at index
+  function prediction(ind)
+    geom = getgeom(dom, ind)
     vals = predfun(fmodel, vars, geom)
     (; zip(vars, vals)...)
   end
+
+  # perform prediction
+  pred = map(prediction, inds)
 
   # convert to original table type
   pred |> Tables.materializer(values(dat))
