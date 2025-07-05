@@ -164,15 +164,15 @@ function fitpredictneigh(model, dat, dom, point, prob, minneighbors, maxneighbor
   # prediction at index
   function prediction(ind)
     # neighbors in current thread
-    nbh = neighbors[Threads.threadid()]
+    tneighbors = neighbors[Threads.threadid()]
 
     # find neighbors with data
-    n = search!(nbh, centroid(dom, ind), searcher)
+    n = search!(tneighbors, centroid(dom, ind), searcher)
 
     # predict if enough neighbors
     vals = if n ≥ minneighbors
       # view neighborhood with data
-      ninds = view(nbh, 1:n)
+      ninds = view(tneighbors, 1:n)
       ndata = view(dat, ninds)
 
       # fit model with neighborhood
