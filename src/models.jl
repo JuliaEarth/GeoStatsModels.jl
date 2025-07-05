@@ -131,6 +131,17 @@ function fitpredict(
 end
 
 function fitpredictneigh(model, dat, dom, path, point, prob, minneighbors, maxneighbors, neighborhood, distance)
+  # prediction function
+  predfun = prob ? _marginals ∘ predictprob : predict
+
+  # geometry function
+  getgeom(dom, ind) = @inbounds (point ? centroid(dom, ind) : dom[ind])
+
+  # variables and indices to predict
+  cols = Tables.columns(values(dat))
+  vars = Tables.columnnames(cols)
+  inds = traverse(dom, path)
+
   # fix neighbors limits
   nobs = nrow(dat)
   if maxneighbors > nobs || maxneighbors < 1
@@ -152,45 +163,40 @@ function fitpredictneigh(model, dat, dom, path, point, prob, minneighbors, maxne
   # pre-allocate memory for neighbors
   neighbors = Vector{Int}(undef, maxneighbors)
 
-  # traverse domain with given path
-  inds = traverse(dom, path)
-
-  # prediction function
-  predfun = prob ? _marginals ∘ predictprob : predict
-
-  # predict variables
-  cols = Tables.columns(values(dat))
-  vars = Tables.columnnames(cols)
-  pred = @inbounds map(inds) do ind
-    # centroid of estimation
-    center = centroid(dom, ind)
-
+  # prediction at index
+  function prediction(ind)
     # find neighbors with data
-    n = search!(neighbors, center, searcher)
+    n = search!(neighbors, centroid(dom, ind), searcher)
 
     # predict if enough neighbors
-    if n ≥ minneighbors
-      # final set of neighbors
-      ninds = view(neighbors, 1:n)
-
+    vals = if n ≥ minneighbors
       # view neighborhood with data
+      ninds = view(neighbors, 1:n)
       ndata = view(dat, ninds)
 
       # fit model with neighborhood
       fmodel = fit(model, ndata)
 
-      # save prediction
-      geom = point ? center : dom[ind]
-      vals = predfun(fmodel, vars, geom)
+      # make prediction
+      geom = getgeom(dom, ind)
+      predfun(fmodel, vars, geom)
     else
       # missing prediction
-      vals = fill(missing, length(vars))
+      fill(missing, length(vars))
     end
+
     (; zip(vars, vals)...)
   end
 
+  # perform prediction
+  preds = if isthreaded()
+    _predictionthread(prediction, inds)
+  else
+    _predictionserial(prediction, inds)
+  end
+
   # convert to original table type
-  pred |> Tables.materializer(values(dat))
+  preds |> Tables.materializer(values(dat))
 end
 
 function fitpredictfull(model, dat, dom, path, point, prob)
