@@ -216,10 +216,26 @@ function fitpredictfull(model, dat, dom, path, point, prob)
   end
 
   # perform prediction
-  pred = map(prediction, inds)
+  preds = if isthreaded()
+    _predictionthread(prediction, inds)
+  else
+    _predictionserial(prediction, inds)
+  end
 
   # convert to original table type
-  pred |> Tables.materializer(values(dat))
+  preds |> Tables.materializer(values(dat))
+end
+
+_predictionserial(prediction, inds) = map(prediction, inds)
+
+function _predictionthread(prediction, inds)
+  pinds = collect(inds)
+  ptype = typeof(prediction(first(pinds)))
+  preds = Vector{ptype}(undef, length(pinds))
+  Threads.@threads for i in eachindex(pinds)
+    preds[i] = prediction(pinds[i])
+  end
+  preds
 end
 
 # ----------------
