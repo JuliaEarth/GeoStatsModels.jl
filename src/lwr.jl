@@ -98,27 +98,26 @@ function matrices(fitted::FittedLWR, var, gₒ)
   c = Tables.columns(values(d))
   z = Tables.getcolumn(c, var)
 
-  # adjust CRS of gₒ
-  gₒ′ = gₒ |> Proj(crs(domain(d)))
+  # obtain centroid and adjust CRS
+  pₒ = centroid(gₒ) |> Proj(crs(domain(d)))
 
   X = fitted.state.X
-  W = wmatrix(fitted, gₒ′)
+  W = wmatrix(fitted, pₒ)
   A = transpose(X) * W * X
 
-  xₒ = CoordRefSystems.raw(coords(centroid(gₒ′)))
+  xₒ = CoordRefSystems.raw(coords(pₒ))
   x = [one(eltype(xₒ)), xₒ...]
 
   X, W, A, x, z
 end
 
-function wmatrix(fitted::FittedLWR, gₒ)
+function wmatrix(fitted::FittedLWR, pₒ)
   w = fitted.model.weightfun
   δ = fitted.model.distance
   d = fitted.state.data
   Ω = domain(d)
   n = nelements(Ω)
 
-  pₒ = centroid(gₒ)
   p(i) = centroid(Ω, i)
 
   δs = map(i -> evaluate(δ, pₒ, p(i)), 1:n)

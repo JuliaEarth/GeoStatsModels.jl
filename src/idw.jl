@@ -78,10 +78,9 @@ function weights(fitted::FittedIDW, gₒ)
   d = fitted.state.data
   Ω = domain(d)
 
-  # adjust CRS of gₒ
-  gₒ′ = gₒ |> Proj(crs(Ω))
+  # obtain centroid and adjust CRS
+  pₒ = centroid(gₒ) |> Proj(crs(Ω))
 
-  pₒ = centroid(gₒ′)
   p(i) = centroid(Ω, i)
 
   λ(i) = 1 / evaluate(δ, pₒ, p(i)) ^ e

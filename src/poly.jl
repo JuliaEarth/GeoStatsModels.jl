@@ -91,11 +91,11 @@ function evalpoly(fitted::FittedPolynomial, var, gₒ)
   deg = fitted.model.degree
   data = fitted.state.data
 
-  # adjust CRS of gₒ
-  gₒ′ = gₒ |> Proj(crs(domain(data)))
+  # obtain centroid and adjust CRS
+  pₒ = centroid(gₒ) |> Proj(crs(domain(data)))
 
   # raw coordinates of centroid
-  xₒ = CoordRefSystems.raw(coords(centroid(gₒ′)))
+  xₒ = CoordRefSystems.raw(coords(pₒ))
 
   # multivariate Vandermonde matrix
   V = vandermonde((xₒ,), deg)
