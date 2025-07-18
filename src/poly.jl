@@ -100,14 +100,16 @@ function evalpoly(fitted::FittedPolynomial, var, gₒ)
   # multivariate Vandermonde matrix
   V = vandermonde((xₒ,), deg)
 
-  # regression coefficients
+  # polynomial evaluation
   P = fitted.state.proj
   c = Tables.columns(values(data))
   z = Tables.getcolumn(c, var)
-  θ = P * z
-
-  first(V * θ)
+  dotpoly(V, P, z)
 end
+
+# https://github.com/PainterQubits/Unitful.jl/issues/717
+dotpoly(V, P, z) = first(V * (P * z))
+dotpoly(V, P, z::AbstractVector{T}) where {T<:Quantity} = first(V * (P * ustrip(z))) * unit(T)
 
 function vandermonde(xs, deg)
   n = length(first(xs))
