@@ -158,21 +158,15 @@ function fitpredictneigh(model, dat, dom, point, prob, minneighbors, maxneighbor
     KBallSearch(domain(dat), maxneighbors, neighborhood)
   end
 
-  # pre-allocate memory for neighbors
-  neighbors = [Vector{Int}(undef, maxneighbors) for _ in 1:Threads.nthreads()]
-
-  # prediction at index
-  function prediction(ind)
-    # neighbors in current thread
-    tneighbors = neighbors[Threads.threadid()]
-
+  # prediction of single index
+  function predictsingle!(neighbors, ind)
     # find neighbors with data
-    n = search!(tneighbors, centroid(dom, ind), searcher)
+    n = search!(neighbors, centroid(dom, ind), searcher)
 
     # predict if enough neighbors
     vals = if n ≥ minneighbors
       # view neighborhood with data
-      ninds = view(tneighbors, 1:n)
+      ninds = view(neighbors, 1:n)
       ndata = view(dat, ninds)
 
       # fit model with neighborhood
@@ -189,11 +183,14 @@ function fitpredictneigh(model, dat, dom, point, prob, minneighbors, maxneighbor
     (; zip(vars, vals)...)
   end
 
+  # pre-allocate memory for neighbors
+  state = [Vector{Int}(undef, maxneighbors) for _ in 1:Threads.nthreads()]
+
   # perform prediction
   preds = if isthreaded()
-    _predictionthread(prediction, inds)
+    _predictionthread!(state, predictsingle!, inds)
   else
-    _predictionserial(prediction, inds)
+    _predictionserial!(state, predictsingle!, inds)
   end
 
   # convert to original table type
@@ -212,38 +209,44 @@ function fitpredictfull(model, dat, dom, point, prob)
   vars = Tables.columnnames(cols)
   inds = 1:nelements(dom)
 
-  # fit model to data
-  fmodel = fit(model, dat)
-  fitted = [deepcopy(fmodel) for _ in 1:Threads.nthreads()]
-
-  # prediction at index
-  function prediction(ind)
-    fmod = fitted[Threads.threadid()]
+  # prediction of single index
+  function predictsingle!(fmodel, ind)
     geom = getgeom(dom, ind)
-    vals = predfun(fmod, vars, geom)
+    vals = predfun(fmodel, vars, geom)
     (; zip(vars, vals)...)
   end
 
+  # fit model to data
+  fmodel = fit(model, dat)
+
+  # copy fitted model to all threads
+  state = [deepcopy(fmodel) for _ in 1:Threads.nthreads()]
+
   # perform prediction
   preds = if isthreaded()
-    _predictionthread(prediction, inds)
+    _predictionthread!(state, predictsingle!, inds)
   else
-    _predictionserial(prediction, inds)
+    _predictionserial!(state, predictsingle!, inds)
   end
 
   # convert to original table type
   preds |> Tables.materializer(values(dat))
 end
 
-_predictionserial(prediction, inds) = map(prediction, inds)
-
-function _predictionthread(prediction, inds)
-  preds = Vector{Any}(undef, length(inds))
-  Threads.@threads for ind in inds
-    preds[ind] = prediction(ind)
+function _predictionthread!(state, predictsingle!, inds)
+  buffer = Vector{Any}(undef, length(inds))
+  chunks = index_chunks(inds, n=Threads.nthreads())
+  Threads.@sync for (cind, chunk) in enumerate(chunks)
+    Threads.@spawn begin
+      for ind in chunk
+        buffer[ind] = predictsingle!(state[cind], ind)
+      end
+    end
   end
-  map(identity, preds)
+  map(identity, buffer)
 end
+
+_predictionserial!(state, predictsingle!, inds) = map(ind -> predictsingle!(first(state), ind), inds)
 
 # ----------------
 # IMPLEMENTATIONS
