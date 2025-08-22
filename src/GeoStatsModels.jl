@@ -16,6 +16,7 @@ using Distances
 using Unitful
 using Tables
 
+using ChunkSplitters: index_chunks
 using LinearAlgebra: QRIteration
 
 include("models.jl")
