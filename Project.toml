@@ -20,7 +20,7 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 [compat]
 ChunkSplitters = "3.1"
 Combinatorics = "1.0"
-CoordRefSystems = "0.18"
+CoordRefSystems = "0.18, 0.19"
 Distances = "0.10"
 Distributions = "0.25"
 GeoStatsFunctions = "0.12"
