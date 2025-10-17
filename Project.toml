@@ -1,7 +1,7 @@
 name = "GeoStatsModels"
 uuid = "ad987403-13c5-47b5-afee-0a48f6ac4f12"
 authors = ["Júlio Hoffimann <julio.hoffimann@gmail.com> and contributors"]
-version = "0.13.1"
+version = "0.13.2"
 
 [deps]
 ChunkSplitters = "ae650224-84b6-46f8-82ea-d812ca08434e"
