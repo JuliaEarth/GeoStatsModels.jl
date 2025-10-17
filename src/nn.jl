@@ -5,7 +5,7 @@
 """
     NN(distance=Euclidean())
 
-A model that assigns the value of the nearest neighbor.
+A model that assigns the nearest non-missing value from neighbors.
 """
 struct NN{D} <: GeoStatsModel
   distance::D
@@ -48,7 +48,9 @@ function nn(fitted::FittedNN, distances, var)
   d = fitted.state.data
   c = Tables.columns(values(d))
   z = Tables.getcolumn(c, var)
-  z[argmin(distances)]
+  s = z[sortperm(distances)]
+  i = findfirst(!ismissing, s)
+  isnothing(i) ? missing : s[i]
 end
 
 function distances(fitted::FittedNN, gₒ)

@@ -18,6 +18,16 @@
     @test pred == "b"
     pred = GeoStatsModels.predict(nn, :z, Point(LatLon(0, 2.8)))
     @test pred == "c"
+
+    # missing value in nearest neighbor
+    data = georef((; z=[missing, missing, "c"]), Point.([(0, 0), (1, 0), (2, 0)]))
+    nn = GeoStatsModels.fit(NN(), data)
+    pred = GeoStatsModels.predict(nn, :z, Point(0, 0))
+    @test pred == "c"
+    pred = GeoStatsModels.predict(nn, :z, Point(1, 0))
+    @test pred == "c"
+    pred = GeoStatsModels.predict(nn, :z, Point(2, 0))
+    @test pred == "c"
   end
 
   @testset "Unitful" begin
