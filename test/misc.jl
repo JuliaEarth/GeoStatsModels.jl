@@ -13,7 +13,7 @@
   # fitpredict with Kriging
   model = Kriging(SphericalVariogram(range=35.0))
   data = georef((; z=[1.0, 0.0, 1.0]), [(25.0, 25.0), (50.0, 75.0), (75.0, 50.0)])
-  grid = CartesianGrid((100, 100), (0.5, 0.5), (1.0, 1.0))
+  grid = CartesianGrid((0.5, 0.5), (100.5, 100.5), dims=(100, 100))
   inds = LinearIndices(size(grid))
   pred = GeoStatsModels.fitpredict(model, data, grid, neighbors=false)
   @test isapprox(pred.z[inds[25, 25]], 1.0, atol=1e-3)
@@ -27,7 +27,7 @@
   # fitpredict with multiple variables and CoKriging
   model = Kriging([1.0 0.3 0.1; 0.3 1.0 0.2; 0.1 0.2 1.0] * SphericalVariogram(range=35.0))
   data = georef((; a=[1.0, 0.0, 0.0], b=[0.0, 1.0, 0.0], c=[0.0, 0.0, 1.0]), [(25.0, 25.0), (50.0, 75.0), (75.0, 50.0)])
-  grid = CartesianGrid((100, 100), (0.5, 0.5), (1.0, 1.0))
+  grid = CartesianGrid((0.5, 0.5), (100.5, 100.5), dims=(100, 100))
   inds = LinearIndices(size(grid))
   pred = GeoStatsModels.fitpredict(model, data, grid, neighbors=true)
   @test isapprox(pred.a[inds[25, 25]], 1.0, atol=1e-3)
