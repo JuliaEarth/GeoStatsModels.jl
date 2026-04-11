@@ -6,12 +6,32 @@
     UniversalKriging(fun, drifts)
 
 Universal Kriging with geostatistical function `fun` and `drifts`.
-A drift is a function `p -> v` maps a point `p` to a unitless value `v`.
+A drift is a function `p -> v` that maps a point `p` to a scalar
+value `v`.
 
     UniversalKriging(fun, deg, dim)
 
 Alternatively, construct monomial `drifts` up to given degree `deg`
-for `dim` geospatial coordinates.
+for `dim` geospatial coordinates. For example, if the data is mapped
+with `(x, y)` `Cartesian` coordinates, then `dim=2` and setting `deg=1`
+will add the monomials `1`, `x`, and `y` as drift functions to the mean
+`1 + β₁x + β₂y`, while setting `deg=2` will lead to a quadratic mean
+`1 + β₁x + β₂y + β₃x² + β₄xy + β₅y²`. The same logic applies to `(ϕ, λ)`
+`LatLon` coordinates or any other type of geospatial coordinates.
+
+## Examples
+
+```julia
+# univariate model with mean 1 + β₁x + β₂y where x and y are Cartesian coordinates
+UniversalKriging(SphericalVariogram(), [p -> 1, p -> coords(p).x, p -> coords(p).y])
+
+# multivariate model with mean 1 + βx² where x is the first Cartesian coordinate
+UniversalKriging(I(2) * SphericalVariogram(), [p -> 1, p -> coords(p).x^2])
+```
+
+See also [`SimpleKriging`](@ref) and [`OrdinaryKriging`](@ref)
+for related Kriging models and the general [`Kriging`](@ref) model
+that selects the appropriate variant as a function of the arguments.
 
 ### Notes
 
@@ -75,7 +95,7 @@ function lhsconstraints!(model::UniversalKriging, LHS::AbstractMatrix, domain)
     for n in eachindex(drifts)
       f = drifts[n](p)
       for j in (1 + (e - 1) * nvar):(e * nvar), i in (ind + (n - 1) * nvar):(ind + n * nvar - 1)
-        LHS[i, j] = f * (i == mod1(j, nvar) + ind + (n - 1) * nvar - 1)
+        LHS[i, j] = ustrip(f) * (i == mod1(j, nvar) + ind + (n - 1) * nvar - 1)
       end
     end
   end
@@ -108,7 +128,7 @@ function rhsconstraints!(fitted::FittedKriging{<:UniversalKriging}, gₒ)
   @inbounds for n in eachindex(drifts)
     f = drifts[n](pₒ)
     for j in 1:ncol, i in (ind + (n - 1) * ncol):(ind + n * ncol - 1)
-      RHS[i, j] = f * (i == j + ind + (n - 1) * ncol - 1)
+      RHS[i, j] = ustrip(f) * (i == j + ind + (n - 1) * ncol - 1)
     end
   end
 

@@ -7,6 +7,20 @@
 
 Simple Kriging with geostatistical function `fun` and constant `mean`.
 
+## Examples
+
+```julia
+# univariate model with mean 5.0
+SimpleKriging(SphericalVariogram(), 5.0)
+
+# multivariate model with mean [5.0, 10.0]
+SimpleKriging(I(2) * SphericalVariogram(), [5.0, 10.0])
+```
+
+See also [`OrdinaryKriging`](@ref) and [`UniversalKriging`](@ref)
+for related Kriging models and the general [`Kriging`](@ref) model
+that selects the appropriate variant as a function of the arguments.
+
 ### Notes
 
 Simple Kriging requires stationary geostatistical function.
@@ -17,7 +31,10 @@ struct SimpleKriging{F<:GeoStatsFunction,M<:AbstractVector} <: KrigingModel
   mean::M
 
   function SimpleKriging{F,M}(fun, mean) where {F<:GeoStatsFunction,M<:AbstractVector}
+    mlen = length(mean)
+    nvar = nvariates(fun)
     @assert isstationary(fun) "Simple Kriging requires stationary geostatistical function"
+    @assert mlen == nvar || isone(mlen) "length of mean vector must match number of covariates in geostatistical function"
     new(fun, mean)
   end
 end
