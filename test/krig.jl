@@ -14,7 +14,7 @@
   @test Kriging(γ, 1, 2) isa UK
   @test Kriging(γ, [x -> 1]) isa DK
 
-  @testset "Basics" begin
+  @testset "Basic tests" begin
     nobs = 10
     pset = rand(rng, Point, nobs) |> Scale(10)
     data = georef((; z=rand(rng, nobs)), pset)
@@ -152,7 +152,7 @@
     end
   end
 
-  @testset "Floats" begin
+  @testset "Floating points" begin
     dim = 3
     nobs = 10
     X_f = rand(rng, Float32, dim, nobs)
@@ -195,7 +195,7 @@
     @test isapprox(var(dkdist_f), var(dkdist_d), atol=1e-4)
   end
 
-  @testset "LatLon" begin
+  @testset "LatLon coordinates" begin
     pset = Point.([LatLon(0, 0), LatLon(0, 1), LatLon(1, 0)])
     data = georef((; z=rand(rng, 3)), pset)
 
@@ -218,7 +218,7 @@
     end
   end
 
-  @testset "Support" begin
+  @testset "Change of support" begin
     data = georef((; z=[1.0, 0.0, 0.0]), [(25.0, 25.0), (50.0, 75.0), (75.0, 50.0)])
 
     γ = GaussianVariogram(sill=1.0, range=1.0, nugget=0.0)
@@ -241,7 +241,7 @@
     @test var(dkdist) ≥ 0
   end
 
-  @testset "Unitful" begin
+  @testset "Unitful values" begin
     pset = rand(rng, Point, 10)
     data = georef((z=rand(rng, 10) * u"K",), pset)
 
@@ -256,7 +256,7 @@
     end
   end
 
-  @testset "CoDa" begin
+  @testset "Compositional data" begin
     pset = rand(rng, Point, 10)
     data = georef((; z=rand(rng, Composition{3}, 10)), pset)
 
@@ -281,7 +281,7 @@
     @test dkmean isa Composition
   end
 
-  @testset "Covariance" begin
+  @testset "Covariance functions" begin
     pset = rand(rng, Point, 100) |> Scale(10)
     data = georef((; z=rand(rng, 100)), pset)
 
@@ -364,7 +364,7 @@
     end
   end
 
-  @testset "Transiogram" begin
+  @testset "Transiogram functions" begin
     pset = [Point(25.0, 25.0), Point(50.0, 75.0), Point(75.0, 50.0)]
     data = georef((; a=[1.0, 0.0, 0.0], b=[0.0, 1.0, 0.0], c=[0.0, 0.0, 1.0]), pset)
 
@@ -398,7 +398,7 @@
     @test all(μ -> 0 ≤ μ ≤ 1, dkmean)
   end
 
-  @testset "Fallbacks" begin
+  @testset "Fallback methods" begin
     d = georef((; z=[1.0, 0.0, 1.0]), [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)])
     γ = GaussianVariogram()
     ok = GeoStatsModels.fit(OK(γ), d)
@@ -416,5 +416,35 @@
     @test pred6 isa MvNormal
     @test pred1 == pred2
     @test pred1 == pred3[1]
+  end
+
+  @testset "Docstring examples" begin
+    pset = [Point(25.0, 25.0), Point(50.0, 75.0), Point(75.0, 50.0)]
+    data1 = georef((; a=[1.0, 0.0, 0.0]), pset)
+    data2 = georef((; a=[1.0, 0.0, 0.0], b=[0.0, 1.0, 0.0]), pset)
+
+    # OrdinaryKriging
+    ok1 = Kriging(SphericalVariogram())
+    fm1 = GeoStatsModels.fit(ok1, data1)
+    @test GeoStatsModels.predict(fm1, :a, Point(50.0, 50.0)) ≈ 1/3
+    ok2 = Kriging(I(2) * SphericalCovariance())
+    fm2 = GeoStatsModels.fit(ok2, data2)
+    @test GeoStatsModels.predict(fm2, (:a, :b), Point(50.0, 50.0)) ≈ [1/3, 1/3]
+
+    # SimpleKriging
+    sk1 = Kriging(SphericalVariogram(), 5.0)
+    fm1 = GeoStatsModels.fit(sk1, data1)
+    @test GeoStatsModels.predict(fm1, :a, Point(50.0, 50.0)) ≈ 5.0
+    sk2 = Kriging(I(2) * SphericalVariogram(), [5.0, 10.0])
+    fm2 = GeoStatsModels.fit(sk2, data2)
+    @test GeoStatsModels.predict(fm2, (:a, :b), Point(50.0, 50.0)) ≈ [5.0, 10.0]
+
+    # UniversalKriging
+    uk1 = Kriging(SphericalVariogram(), [p -> 1, p -> coords(p).x, p -> coords(p).y])
+    fm1 = GeoStatsModels.fit(uk1, data1)
+    @test GeoStatsModels.predict(fm1, :a, Point(50.0, 50.0)) ≈ 1/3
+    uk2 = Kriging(I(2) * SphericalVariogram(), [p -> 1, p -> coords(p).x^2])
+    fm2 = GeoStatsModels.fit(uk2, data2)
+    @test GeoStatsModels.predict(fm2, (:a, :b), Point(50.0, 50.0)) ≈ [0.4081632653061225, 0.34693877551020413] 
   end
 end

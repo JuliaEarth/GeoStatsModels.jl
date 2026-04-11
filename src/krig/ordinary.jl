@@ -6,6 +6,20 @@
     OrdinaryKriging(fun)
 
 Ordinary Kriging with geostatistical function `fun`.
+
+## Examples
+
+```julia
+# univariate model with unknown mean
+OrdinaryKriging(SphericalVariogram())
+
+# multivariate model with unknown mean
+OrdinaryKriging(I(2) * SphericalCovariance())
+```
+
+See also [`SimpleKriging`](@ref) and [`UniversalKriging`](@ref)
+for related Kriging models and the general [`Kriging`](@ref) model
+that selects the appropriate variant as a function of the arguments.
 """
 struct OrdinaryKriging{F<:GeoStatsFunction} <: KrigingModel
   fun::F
