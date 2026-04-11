@@ -423,14 +423,6 @@
     data1 = georef((; a=[1.0, 0.0, 0.0]), pset)
     data2 = georef((; a=[1.0, 0.0, 0.0], b=[0.0, 1.0, 0.0]), pset)
 
-    # OrdinaryKriging
-    ok1 = Kriging(SphericalVariogram())
-    fm1 = GeoStatsModels.fit(ok1, data1)
-    @test GeoStatsModels.predict(fm1, :a, Point(50.0, 50.0)) ≈ 1/3
-    ok2 = Kriging(I(2) * SphericalCovariance())
-    fm2 = GeoStatsModels.fit(ok2, data2)
-    @test GeoStatsModels.predict(fm2, (:a, :b), Point(50.0, 50.0)) ≈ [1/3, 1/3]
-
     # SimpleKriging
     sk1 = Kriging(SphericalVariogram(), 5.0)
     fm1 = GeoStatsModels.fit(sk1, data1)
@@ -438,6 +430,14 @@
     sk2 = Kriging(I(2) * SphericalVariogram(), [5.0, 10.0])
     fm2 = GeoStatsModels.fit(sk2, data2)
     @test GeoStatsModels.predict(fm2, (:a, :b), Point(50.0, 50.0)) ≈ [5.0, 10.0]
+
+    # OrdinaryKriging
+    ok1 = Kriging(SphericalVariogram())
+    fm1 = GeoStatsModels.fit(ok1, data1)
+    @test GeoStatsModels.predict(fm1, :a, Point(50.0, 50.0)) ≈ 1/3
+    ok2 = Kriging(I(2) * SphericalCovariance())
+    fm2 = GeoStatsModels.fit(ok2, data2)
+    @test GeoStatsModels.predict(fm2, (:a, :b), Point(50.0, 50.0)) ≈ [1/3, 1/3]
 
     # UniversalKriging
     uk1 = Kriging(SphericalVariogram(), [p -> 1, p -> coords(p).x, p -> coords(p).y])
