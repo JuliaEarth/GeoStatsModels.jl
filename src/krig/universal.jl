@@ -12,7 +12,12 @@ value `v`.
     UniversalKriging(fun, deg, dim)
 
 Alternatively, construct monomial `drifts` up to given degree `deg`
-for `dim` geospatial coordinates.
+for `dim` geospatial coordinates. For example, if the data is mapped
+with `(x, y)` `Cartesian` coordinates, then `dim=2` and setting `deg=1`
+will add the monomials `1`, `x`, and `y` as drift functions to the mean
+`1 + β₁x + β₂y`, while setting `deg=2` will lead to a quadratic mean
+`1 + β₁x + β₂y + β₃x² + β₄xy + β₅y²`. The same logic applies to `(ϕ, λ)`
+`LatLon` coordinates or any other type of geospatial coordinates.
 
 ## Examples
 
