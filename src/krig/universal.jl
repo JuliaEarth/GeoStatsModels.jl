@@ -30,8 +30,9 @@ UniversalKriging(I(2) * SphericalVariogram(), [p -> 1, p -> coords(p).x^2])
 ```
 
 See also [`SimpleKriging`](@ref) and [`OrdinaryKriging`](@ref)
-for related Kriging models and the general [`Kriging`](@ref) model
-that selects the appropriate variant as a function of the arguments.
+for related Kriging models and the general [`Kriging`](@ref)
+constructor that selects the appropriate variant as a function
+of the arguments.
 
 ### Notes
 

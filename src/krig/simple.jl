@@ -18,8 +18,9 @@ SimpleKriging(I(2) * SphericalVariogram(), [5.0, 10.0])
 ```
 
 See also [`OrdinaryKriging`](@ref) and [`UniversalKriging`](@ref)
-for related Kriging models and the general [`Kriging`](@ref) model
-that selects the appropriate variant as a function of the arguments.
+for related Kriging models and the general [`Kriging`](@ref)
+constructor that selects the appropriate variant as a function
+of the arguments.
 
 ### Notes
 
