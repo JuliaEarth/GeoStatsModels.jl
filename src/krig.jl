@@ -78,7 +78,7 @@ end
 # make sure data is compatible with model
 function checkcompat(model::KrigingModel, data)
   fun = model.fun
-  nvar = nvariates(fun)
+  nvar = nvariables(fun)
   nfeat = ncol(data) - 1
   if nfeat != nvar
     throw(ArgumentError("$nfeat data column(s) provided to $nvar-variate Kriging model"))
@@ -92,7 +92,7 @@ function prealloc(model::KrigingModel, data)
 
   # retrieve matrix parameters
   nobs = nelements(dom)
-  nvar = nvariates(fun)
+  nvar = nvariables(fun)
   ncon = nconstraints(model)
   nfun = nobs * nvar
   nrow = nfun + ncon
@@ -116,7 +116,7 @@ function setlhs!(model::KrigingModel, LHS, data)
 
   # number of function evaluations
   nobs = nelements(dom)
-  nvar = nvariates(fun)
+  nvar = nvariables(fun)
   nfun = nobs * nvar
 
   # find locations with missing values
@@ -167,7 +167,7 @@ function lhsbanded!(LHS, fun, dom)
 
   # retrieve matrix paramaters
   nobs = nelements(dom)
-  nvar = nvariates(fun)
+  nvar = nvariables(fun)
   nfun = nobs * nvar
 
   @inbounds for j in 1:nfun, i in 1:nfun
@@ -366,7 +366,7 @@ function rhsbanded!(RHS, fun, dom)
 
   # retrieve matrix paramaters
   nobs = nelements(dom)
-  nvar = nvariates(fun)
+  nvar = nvariables(fun)
   nfun = nobs * nvar
 
   @inbounds for j in 1:nvar, i in 1:nfun

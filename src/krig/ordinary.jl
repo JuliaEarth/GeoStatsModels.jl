@@ -28,11 +28,11 @@ end
 
 scale(model::OrdinaryKriging, α) = OrdinaryKriging(GeoStatsFunctions.scale(model.fun, α))
 
-nconstraints(model::OrdinaryKriging) = nvariates(model.fun)
+nconstraints(model::OrdinaryKriging) = nvariables(model.fun)
 
 function lhsconstraints!(model::OrdinaryKriging, LHS::AbstractMatrix, domain)
   nobs = nelements(domain)
-  nvar = nvariates(model.fun)
+  nvar = nvariables(model.fun)
   ncon = nconstraints(model)
   nfun = nobs * nvar
   nrow = nfun + ncon
@@ -59,7 +59,7 @@ end
 
 function rhsconstraints!(fitted::FittedKriging{<:OrdinaryKriging}, gₒ)
   RHS = fitted.state.RHS
-  nvar = nvariates(fitted.model.fun)
+  nvar = nvariables(fitted.model.fun)
   ncon = nconstraints(fitted.model)
   nfun = fitted.state.nfun
   nrow = nfun + ncon

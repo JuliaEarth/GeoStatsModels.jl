@@ -76,12 +76,12 @@ function exponents(deg::Int, dim::Int)
   eachcol(pow[:, inds])
 end
 
-nconstraints(model::UniversalKriging) = nvariates(model.fun) * length(model.drifts)
+nconstraints(model::UniversalKriging) = nvariables(model.fun) * length(model.drifts)
 
 function lhsconstraints!(model::UniversalKriging, LHS::AbstractMatrix, domain)
   drifts = model.drifts
   nobs = nelements(domain)
-  nvar = nvariates(model.fun)
+  nvar = nvariables(model.fun)
   ncon = nconstraints(model)
   nfun = nobs * nvar
   nrow = nfun + ncon
@@ -115,7 +115,7 @@ end
 function rhsconstraints!(fitted::FittedKriging{<:UniversalKriging}, gₒ)
   RHS = fitted.state.RHS
   drifts = fitted.model.drifts
-  nvar = nvariates(fitted.model.fun)
+  nvar = nvariables(fitted.model.fun)
   nfun = fitted.state.nfun
   ncol = nvar
 

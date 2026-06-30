@@ -33,7 +33,7 @@ struct SimpleKriging{F<:GeoStatsFunction,M<:AbstractVector} <: KrigingModel
 
   function SimpleKriging{F,M}(fun, mean) where {F<:GeoStatsFunction,M<:AbstractVector}
     mlen = length(mean)
-    nvar = nvariates(fun)
+    nvar = nvariables(fun)
     @assert isstationary(fun) "Simple Kriging requires stationary geostatistical function"
     @assert mlen == nvar || isone(mlen) "length of mean vector must match number of covariates in geostatistical function"
     new(fun, mean)
