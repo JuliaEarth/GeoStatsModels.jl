@@ -1,5 +1,6 @@
 using BenchmarkTools
 using GeoStatsModels
+using GeoStatsFunctions
 using GeoTables
 using Meshes
 
