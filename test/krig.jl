@@ -281,6 +281,36 @@
     @test dkmean isa Composition
   end
 
+  @testset "Missing data" begin
+    pset = [(25.0, 25.0), (50.0, 75.0), (75.0, 50.0)]
+    data = georef((; z=[missing, 2.0, 3.0]), pset)
+
+    γ = GaussianVariogram()
+    sk = GeoStatsModels.fit(SK(γ, 0.0), data)
+    ok = GeoStatsModels.fit(OK(γ), data)
+    uk = GeoStatsModels.fit(UK(γ, 1, 2), data)
+    dk = GeoStatsModels.fit(DK(γ, [x -> 1.0]), data)
+
+    # predict on a specific point
+    pₒ = Point(50.0, 50.0)
+    skdist = GeoStatsModels.predictprob(sk, :z, pₒ)
+    okdist = GeoStatsModels.predictprob(ok, :z, pₒ)
+    ukdist = GeoStatsModels.predictprob(uk, :z, pₒ)
+    dkdist = GeoStatsModels.predictprob(dk, :z, pₒ)
+
+    # mean checks
+    @test mean(skdist) ≈ 0.0 atol = 1e-6
+    @test mean(okdist) ≈ 0.0 atol = 1e-6
+    @test 1.0 < mean(ukdist) < 2.0
+    @test mean(dkdist) ≈ 0.0 atol = 1e-6
+
+    # variance checks
+    @test var(skdist) ≥ 0
+    @test var(okdist) ≥ 0
+    @test var(ukdist) ≥ 0
+    @test var(dkdist) ≥ 0
+  end
+
   @testset "Covariance functions" begin
     pset = rand(rng, Point, 100) |> Scale(10)
     data = georef((; z=rand(rng, 100)), pset)
