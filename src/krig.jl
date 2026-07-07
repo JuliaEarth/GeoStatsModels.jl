@@ -12,16 +12,15 @@ abstract type KrigingModel <: GeoStatsModel end
 Base.range(model::KrigingModel) = range(model.fun)
 
 """
-    KrigingState(data, LHS, RHS, FHS, nfun, miss)
+    KrigingState(data, FHS, RHS, nfun, miss)
 
 A Kriging state stores information needed
 to perform estimation at any given geometry.
 """
-mutable struct KrigingState{D<:AbstractGeoTable,L,R,F}
+mutable struct KrigingState{D<:AbstractGeoTable,F,R}
   data::D
-  LHS::L
-  RHS::R
   FHS::F
+  RHS::R
   nfun::Int
   miss::Vector{Int}
 end
@@ -67,10 +66,10 @@ function fit(model::KrigingModel, data)
   nfun, miss = setlhs!(model, LHS, data)
 
   # factorize LHS
-  FHS = lhsfactorize(model, LHS)
+  FHS = lhsfactorize!(model, LHS, miss)
 
   # record Kriging state
-  state = KrigingState(data, LHS, RHS, FHS, nfun, miss)
+  state = KrigingState(data, FHS, RHS, nfun, miss)
 
   FittedKriging(model, state)
 end
@@ -139,24 +138,26 @@ function setlhs!(model::KrigingModel, LHS, data)
 end
 
 # choose appropriate factorization of LHS
-lhsfactorize(model::GeoStatsModel, LHS) = _lhsfactorize(model.fun, LHS)
-
-# enforce Bunch-Kaufman factorization for symmetric functions
-_lhsfactorize(::Variogram, LHS) = bunchkaufman!(Symmetric(LHS), check=false)
-_lhsfactorize(::Covariance, LHS) = bunchkaufman!(Symmetric(LHS), check=false)
+lhsfactorize!(model::GeoStatsModel, LHS, miss) = _lhsfactorize!(model.fun, LHS, miss)
 
 # enforce SVD factorization for rank-deficient matrices
 # use QRIteration to avoid LAPACK bug: https://github.com/Reference-LAPACK/lapack/issues/672
-_lhsfactorize(::Transiogram, LHS) = svd!(LHS, alg=QRIteration())
+_lhsfactorize!(::Transiogram, LHS, miss) = svd!(LHS, alg=QRIteration())
 
 # choose appropriate factorization for other functions (e.g., CompositeFunction)
-function _lhsfactorize(fun::GeoStatsFunction, LHS)
-  if issymmetric(fun)
-    # enforce Bunch-Kaufman factorization
-    bunchkaufman!(Symmetric(LHS), check=false)
+function _lhsfactorize!(fun::GeoStatsFunction, LHS, miss)
+  if isempty(miss)
+    if issymmetric(fun)
+      # enforce Bunch-Kaufman factorization
+      bunchkaufman!(Symmetric(LHS), check=false)
+    else
+      # fallback to LU factorization
+      lu!(LHS, check=false)
+    end
   else
-    # fallback to LU factorization
-    lu!(LHS, check=false)
+    # fallback to SVD factorization for rank-deficient matrices
+    # use QRIteration to avoid LAPACK bug: https://github.com/Reference-LAPACK/lapack/issues/672
+    svd!(LHS, alg=QRIteration())
   end
 end
 
