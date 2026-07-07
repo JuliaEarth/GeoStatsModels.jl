@@ -67,7 +67,7 @@ function fit(model::KrigingModel, data)
   nfun, miss = setlhs!(model, LHS, data)
 
   # factorize LHS
-  FHS = lhsfactorize(model, LHS, miss)
+  FHS = lhsfactorize(model, LHS)
 
   # record Kriging state
   state = KrigingState(data, LHS, RHS, FHS, nfun, miss)
@@ -139,26 +139,24 @@ function setlhs!(model::KrigingModel, LHS, data)
 end
 
 # choose appropriate factorization of LHS
-lhsfactorize(model::GeoStatsModel, LHS, miss) = _lhsfactorize(model.fun, LHS, miss)
+lhsfactorize(model::GeoStatsModel, LHS) = _lhsfactorize(model.fun, LHS)
+
+# enforce Bunch-Kaufman factorization for symmetric functions
+_lhsfactorize(::Variogram, LHS) = bunchkaufman!(Symmetric(LHS), check=false)
+_lhsfactorize(::Covariance, LHS) = bunchkaufman!(Symmetric(LHS), check=false)
 
 # enforce SVD factorization for rank-deficient matrices
 # use QRIteration to avoid LAPACK bug: https://github.com/Reference-LAPACK/lapack/issues/672
-_lhsfactorize(::Transiogram, LHS, miss) = svd!(LHS, alg=QRIteration())
+_lhsfactorize(::Transiogram, LHS) = svd!(LHS, alg=QRIteration())
 
-# fallback method for all geostatistical functions (e.g., CompositeFunction)
-function _lhsfactorize(fun::GeoStatsFunction, LHS, miss)
-  if isempty(miss)
-    if issymmetric(fun)
-      # enforce Bunch-Kaufman factorization
-      bunchkaufman!(Symmetric(LHS), check=false)
-    else
-      # fallback to LU factorization
-      lu!(LHS, check=false)
-    end
+# choose appropriate factorization for other functions (e.g., CompositeFunction)
+function _lhsfactorize(fun::GeoStatsFunction, LHS)
+  if issymmetric(fun)
+    # enforce Bunch-Kaufman factorization
+    bunchkaufman!(Symmetric(LHS), check=false)
   else
-    # fallback to SVD factorization for rank-deficient matrices
-    # use QRIteration to avoid LAPACK bug: https://github.com/Reference-LAPACK/lapack/issues/672
-    svd!(LHS, alg=QRIteration())
+    # fallback to LU factorization
+    lu!(LHS, check=false)
   end
 end
 
