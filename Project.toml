@@ -1,7 +1,7 @@
 name = "GeoStatsModels"
 uuid = "ad987403-13c5-47b5-afee-0a48f6ac4f12"
 authors = ["Júlio Hoffimann <julio.hoffimann@gmail.com> and contributors"]
-version = "0.13.12"
+version = "0.13.13"
 
 [deps]
 ChunkSplitters = "ae650224-84b6-46f8-82ea-d812ca08434e"
@@ -20,13 +20,13 @@ Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 [compat]
 ChunkSplitters = "3.1"
 Combinatorics = "1.0"
-CoordRefSystems = "0.20"
+CoordRefSystems = "0.21"
 Distances = "0.10"
 Distributions = "0.25"
 GeoStatsFunctions = "0.16"
 GeoTables = "1.25"
 LinearAlgebra = "1.10"
-Meshes = "0.58"
+Meshes = "0.59"
 Statistics = "1.10"
 Tables = "1.10"
 Unitful = "1.11"
