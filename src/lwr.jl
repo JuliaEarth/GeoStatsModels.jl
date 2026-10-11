@@ -3,12 +3,13 @@
 # ------------------------------------------------------------------
 
 """
-    LWR(weightfun=h -> exp(-3 * h^2), distance=Euclidean())
+    LWR(weightfun=h -> exp(-3 * h^2), distance=EuclideanDistance())
 
 The locally weighted regression (a.k.a. LOESS) model introduced by
-Cleveland 1979. It is the most natural generalization of [`IDW`](@ref)
-in which one is allowed to use a custom weight function instead of
-distance-based weights.
+Cleveland 1979 as the most natural generalization of [`IDW`](@ref).
+
+Optionally, specify a custom weight function `weightfun` and a
+`distance` from Meshes.jl.
 
 ## References
 
@@ -25,7 +26,7 @@ struct LWR{F,D} <: GeoStatsModel
   distance::D
 end
 
-LWR(weightfun) = LWR(weightfun, Euclidean())
+LWR(weightfun) = LWR(weightfun, EuclideanDistance())
 LWR() = LWR(h -> exp(-3 * h ^ 2))
 
 mutable struct LWRState{D<:AbstractGeoTable,T}
@@ -38,7 +39,7 @@ struct FittedLWR{M<:LWR,S<:LWRState} <: FittedGeoStatsModel
   state::S
 end
 
-status(fitted::FittedLWR) = true
+status(::FittedLWR) = true
 
 #--------------
 # FITTING STEP
@@ -120,8 +121,8 @@ function wmatrix(fitted::FittedLWR, pₒ)
 
   p(i) = centroid(Ω, i)
 
-  δs = map(i -> evaluate(δ, pₒ, p(i)), 1:n)
-  ws = w.(δs / maximum(δs))
+  δs = map(i -> δ(pₒ, p(i)), 1:n)
+  ws = map(w, δs / maximum(δs))
 
   Diagonal(ws)
 end

@@ -3,14 +3,14 @@
 # ------------------------------------------------------------------
 
 """
-    IDW(exponent=1, distance=Euclidean())
+    IDW(exponent=1, distance=EuclideanDistance())
 
 The inverse distance weighting model introduced in
 the very early days of geostatistics by Shepard 1968.
 
 The weights are computed as `λᵢ = 1 / d(x, xᵢ)ᵉ` for
-a given `distance` denoted by `d` and `exponent` denoted
-by `e`.
+a given `distance` from Meshes.jl denoted by `d` and
+`exponent` denoted by `e`.
 
 ## References
 
@@ -22,7 +22,7 @@ struct IDW{E,D} <: GeoStatsModel
   distance::D
 end
 
-IDW(exponent) = IDW(exponent, Euclidean())
+IDW(exponent) = IDW(exponent, EuclideanDistance())
 IDW() = IDW(1)
 
 struct IDWState{D<:AbstractGeoTable}
@@ -34,7 +34,7 @@ struct FittedIDW{M<:IDW,S<:IDWState} <: FittedGeoStatsModel
   state::S
 end
 
-status(fitted::FittedIDW) = true
+status(::FittedIDW) = true
 
 #--------------
 # FITTING STEP
@@ -83,7 +83,7 @@ function weights(fitted::FittedIDW, gₒ)
 
   p(i) = centroid(Ω, i)
 
-  λ(i) = 1 / evaluate(δ, pₒ, p(i)) ^ e
+  λ(i) = 1 / δ(pₒ, p(i)) ^ e
 
   map(λ, 1:nelements(Ω))
 end

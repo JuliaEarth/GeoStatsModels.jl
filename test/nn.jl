@@ -11,7 +11,7 @@
 
     # latlon coordinates
     data = georef((; z=["a", "b", "c"]), Point.([LatLon(0, 1), LatLon(0, 2), LatLon(0, 3)]))
-    nn = GeoStatsModels.fit(NN(Haversine()), data)
+    nn = GeoStatsModels.fit(NN(GeodesicDistance()), data)
     pred = GeoStatsModels.predict(nn, :z, Point(LatLon(0, 0.8)))
     @test pred == "a"
     pred = GeoStatsModels.predict(nn, :z, Point(LatLon(0, 1.8)))

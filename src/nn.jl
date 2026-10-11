@@ -3,15 +3,17 @@
 # ------------------------------------------------------------------
 
 """
-    NN(distance=Euclidean())
+    NN(distance=EuclideanDistance())
 
 A model that assigns the nearest non-missing value from neighbors.
+
+Optionally, specify a `distance` from Meshes.jl.
 """
 struct NN{D} <: GeoStatsModel
   distance::D
 end
 
-NN() = NN(Euclidean())
+NN() = NN(EuclideanDistance())
 
 struct NNState{D<:AbstractGeoTable}
   data::D
@@ -22,7 +24,7 @@ struct FittedNN{M<:NN,S<:NNState} <: FittedGeoStatsModel
   state::S
 end
 
-status(fitted::FittedNN) = true
+status(::FittedNN) = true
 
 #--------------
 # FITTING STEP
@@ -63,7 +65,7 @@ function distances(fitted::FittedNN, gₒ)
 
   p(i) = centroid(Ω, i)
 
-  λ(i) = evaluate(δ, pₒ, p(i))
+  λ(i) = δ(pₒ, p(i))
 
   map(λ, 1:nelements(Ω))
 end

@@ -7,7 +7,7 @@
 
     # latlon coordinates
     data = georef((; z=[1.0, 0.0, 1.0]), Point.([LatLon(0, 1), LatLon(0, 2), LatLon(0, 3)]))
-    idw = GeoStatsModels.fit(IDW(1, Haversine()), data)
+    idw = GeoStatsModels.fit(IDW(1, GeodesicDistance()), data)
     pred = GeoStatsModels.predict(idw, :z, Point(LatLon(0, 1)))
     @test pred == 1
     pred = GeoStatsModels.predict(idw, :z, Point(LatLon(0, 2)))

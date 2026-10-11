@@ -12,10 +12,10 @@ using GeoStatsFunctions
 using LinearAlgebra
 using Distributions
 using Combinatorics
-using Distances
 using Unitful
 using Tables
 
+using Distances: Euclidean
 using ChunkSplitters: index_chunks
 using LinearAlgebra: QRIteration
 
