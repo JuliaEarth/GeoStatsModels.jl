@@ -97,7 +97,7 @@ variables on `domain` using a set of `options`.
 * `minneighbors` - Minimum number of neighbors (default to `1`)
 * `maxneighbors` - Maximum number of neighbors (default to `10`)
 * `neighborhood` - Search neighborhood (default to `nothing`)
-* `distance`     - Distance to find nearest neighbors (default to `Euclidean()`)
+* `distance`     - Distance to find nearest neighbors (default to `EuclideanDistance()`)
 """
 function fitpredict(
   model::GeoStatsModel,
@@ -109,7 +109,7 @@ function fitpredict(
   minneighbors=1,
   maxneighbors=10,
   neighborhood=nothing,
-  distance=Euclidean()
+  distance=EuclideanDistance()
 )
   # point or volume support
   pdat = point ? _pointsupport(dat) : dat
@@ -151,8 +151,8 @@ function fitpredictneigh(model, dat, dom, point, prob, minneighbors, maxneighbor
 
   # determine bounded search method
   searcher = if isnothing(neighborhood)
-    # nearest neighbor search with a metric
-    KNearestSearch(domain(dat), maxneighbors; metric=distance)
+    # nearest neighbor search with a distance
+    KNearestSearch(domain(dat), maxneighbors; distance)
   else
     # neighbor search with ball neighborhood
     KBallSearch(domain(dat), maxneighbors, neighborhood)
