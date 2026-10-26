@@ -115,7 +115,7 @@ function fitpredict(
   pdat = point ? _pointsupport(dat) : dat
 
   # scale objects for numerical stability
-  smodel, sdat, sdom, sneigh = _scale(model, pdat, dom, neighborhood)
+  smodel, sdom, sdat, sneigh = _scale(model, dom, pdat, neighborhood)
 
   # choose between full and neighbor-based algorithm
   pred = if neighbors
@@ -269,20 +269,20 @@ function _pointsupport(dat)
   georef(tab, pset)
 end
 
-function _scale(model, dat, dom, neigh)
+function _scale(model, dom, dat, neigh)
   l₁ = _scalefactor(model)
-  l₂ = _scalefactor(domain(dat)) |> unit(l₁)
-  l₃ = _scalefactor(dom) |> unit(l₁)
+  l₂ = _scalefactor(dom) |> unit(l₁)
+  l₃ = _scalefactor(domain(dat)) |> unit(l₁)
   lₘ = max(l₁, l₂, l₃)
   α = ustrip(inv(lₘ))
   u = unit(lₘ)
 
   smodel = scale(model, α)
-  sdat = dat |> LengthUnit(u) |> Scale(α)
   sdom = dom |> LengthUnit(u) |> Scale(α)
+  sdat = dat |> LengthUnit(u) |> Scale(α)
   sneigh = isnothing(neigh) ? nothing : α * neigh
 
-  smodel, sdat, sdom, sneigh
+  smodel, sdom, sdat, sneigh
 end
 
 function _scalefactor(model::GeoStatsModel)
