@@ -270,29 +270,32 @@ function _pointsupport(dat)
 end
 
 function _scale(model, dat, dom, neigh)
-  α₁ = _scalefactor(model)
-  α₂ = _scalefactor(domain(dat))
-  α₃ = _scalefactor(dom)
-  α = inv(max(α₁, α₂, α₃))
+  l₁ = _scalefactor(model)
+  l₂ = _scalefactor(domain(dat)) |> unit(l₁)
+  l₃ = _scalefactor(dom) |> unit(l₁)
+  lₘ = max(l₁, l₂, l₃)
+  α = ustrip(inv(lₘ))
+  u = unit(lₘ)
 
-  smodel = GeoStatsModels.scale(model, α)
-  sdat = dat |> Scale(α)
-  sdom = dom |> Scale(α)
+  smodel = scale(model, α)
+  sdat = dat |> LengthUnit(u) |> Scale(α)
+  sdom = dom |> LengthUnit(u) |> Scale(α)
   sneigh = isnothing(neigh) ? nothing : α * neigh
 
   smodel, sdat, sdom, sneigh
 end
 
-function _scalefactor(domain::Domain)
-  pmin, pmax = extrema(boundingbox(domain))
-  cmin = abs.(to(pmin))
-  cmax = abs.(to(pmax))
-  ustrip(max(cmin..., cmax...))
+function _scalefactor(model::GeoStatsModel)
+  r = range(model)
+  isinf(r) ? oneunit(r) : r
 end
 
-function _scalefactor(model::GeoStatsModel)
-  r = ustrip(range(model))
-  isinf(r) ? one(r) : r
+function _scalefactor(domain::Domain)
+  bbox = boundingbox(domain)
+  a, b = extrema(bbox)
+  xmin = map(abs, to(a))
+  xmax = map(abs, to(b))
+  max(xmin..., xmax...)
 end
 
 _marginals(dist::UnivariateDistribution) = (dist,)
